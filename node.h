@@ -1,6 +1,10 @@
 #ifndef _NODE_H_
 #define _NODE_H_
 
+#include <utility>
+
+using namespace std;
+
 class AlignedNode {
  public:
   AlignedNode();
@@ -9,11 +13,25 @@ class AlignedNode {
 
   int GetTag();
 
-  void SetTag(int tag);
+  void SetTag(int value);
+
+  bool IsSetWord();
 
   int GetWord();
 
-  void SetWord(int word);
+  void SetWord(int value);
+
+  bool IsSplitNode();
+
+  void SetSplitNode(bool value);
+
+  pair<int, int> GetSpan();
+
+  void SetSpan(const pair<int, int>& span);
+
+  bool operator<(const AlignedNode& node) const;
+
+  bool operator!=(const AlignedNode& node) const;
 
  private:
   int tag, word;
@@ -26,6 +44,10 @@ class StringNode {
   StringNode(int word, int var_index);
 
   int GetWord();
+
+  int GetVarIndex();
+
+  bool operator<(const StringNode& node) const;
 
  private:
   int word, var_index;

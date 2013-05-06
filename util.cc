@@ -42,7 +42,7 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
     } else if (*it == ")") {
       // Remove node from the top of the stack (leave subtree).
       st.pop();
-    } else if (st.top()->IsSetTag()) {
+    } else if (!st.top()->IsSetTag()) {
       // If the top node is empty (i.e. the tag is unset), we are reading the
       // nonterminal root of the subtree.
       st.top()->SetTag(dictionary.GetIndex(*it));

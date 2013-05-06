@@ -1,10 +1,10 @@
 #include "node.h"
 
-AlignedNode::AlignedNode() : tag(-1), word(-1), start(0), end(0),
-                             split_node(false) {}
+AlignedNode::AlignedNode() :
+    tag(-1), word(-1), start(0), end(0), split_node(false) {}
 
 bool AlignedNode::IsSetTag() {
-  return tag == -1;
+  return tag != -1;
 }
 
 int AlignedNode::GetTag() {
@@ -15,6 +15,10 @@ void AlignedNode::SetTag(int value) {
   tag = value;
 }
 
+bool AlignedNode::IsSetWord() {
+  return word != -1;
+}
+
 int AlignedNode::GetWord() {
   return word;
 }
@@ -23,9 +27,43 @@ void AlignedNode::SetWord(int value) {
   word = value;
 }
 
+bool AlignedNode::IsSplitNode() {
+  return split_node;
+}
+
+void AlignedNode::SetSplitNode(bool value) {
+  split_node = value;
+}
+
+pair<int, int> AlignedNode::GetSpan() {
+  return make_pair(start, end);
+}
+
+void AlignedNode::SetSpan(const pair<int, int>& span) {
+  start = span.first;
+  end = span.second;
+}
+
+bool AlignedNode::operator<(const AlignedNode& node) const {
+  return tag < node.tag || (tag == node.tag && word < node.word);
+}
+
+bool AlignedNode::operator!=(const AlignedNode& node) const {
+  return tag != node.tag || word != node.word;
+}
+
+
 StringNode::StringNode(int word, int var_index) :
-                       word(word), var_index(var_index) {}
+    word(word), var_index(var_index) {}
 
 int StringNode::GetWord() {
   return word;
+}
+
+int StringNode::GetVarIndex() {
+  return var_index;
+}
+
+bool StringNode::operator<(const StringNode& node) const {
+  return word < node.word || (word == node.word && var_index < node.var_index);
 }
