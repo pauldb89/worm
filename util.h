@@ -7,8 +7,8 @@
 using namespace std;
 
 class AlignedTree;
-class StringNode;
 class Dictionary;
+class StringNode;
 
 typedef vector<StringNode> String;
 typedef pair<AlignedTree, String> Instance;

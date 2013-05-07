@@ -34,4 +34,7 @@ class AlignedTree: public tree<AlignedNode> {
   bool operator==(const AlignedTree& tree) const;
 };
 
+bool operator<(const AlignedTree::iterator& it1,
+               const AlignedTree::iterator& it2);
+
 #endif

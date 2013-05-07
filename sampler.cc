@@ -42,8 +42,8 @@ void Sampler::Sample(int iterations) {
   InitializeRuleCounts();
 
   for (int iter = 0; iter < iterations; ++iter) {
-    // Randomly shuffle the training set.
     random_shuffle(training->begin(), training->end());
+    cerr << iter << endl;
 
     for (auto& instance: *training) {
       SampleAlignments(instance);
@@ -126,7 +126,8 @@ void Sampler::SampleAlignments(const Instance& instance) {
 
 void Sampler::SampleSwaps(const Instance& instance) {
   const AlignedTree& tree = instance.first;
-  set<AlignedNode> frontier;
+  set<NodeIter> frontier;
+
   for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
     // We can only swap descendants of split nodes.
     if (!node->IsSplitNode()) {
@@ -136,7 +137,7 @@ void Sampler::SampleSwaps(const Instance& instance) {
     vector<NodeIter> descendants = tree.GetSplitDescendants(node);
     // If there are no descendants, we have nothing to sample.
     if (descendants.empty()) {
-      frontier.insert(*node);
+      frontier.insert(node);
       continue;
     }
 
@@ -144,7 +145,7 @@ void Sampler::SampleSwaps(const Instance& instance) {
     // no descendants (and no additional constraints).
     descendants.erase(remove_if(descendants.begin(), descendants.end(),
         [&frontier](const NodeIter& node) -> bool {
-          return frontier.count(*node) == 0;
+          return frontier.count(node) == 0;
         }), descendants.end());
 
     random_shuffle(descendants.begin(), descendants.end());

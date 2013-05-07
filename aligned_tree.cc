@@ -77,3 +77,8 @@ bool AlignedTree::operator<(const AlignedTree& tree) const {
 bool AlignedTree::operator==(const AlignedTree& tree) const {
   return !(*this < tree || tree < *this);
 }
+
+bool operator<(const NodeIter& it1, const NodeIter& it2) {
+  // Comparing pointers.
+  return it1.node < it2.node;
+}
