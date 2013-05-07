@@ -28,6 +28,8 @@ class AlignedTree: public tree<AlignedNode> {
   vector<iterator> GetSplitDescendants(const iterator& root) const;
 
   bool operator<(const AlignedTree& tree) const;
+
+  bool operator==(const AlignedTree& tree) const;
 };
 
 #endif

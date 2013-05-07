@@ -4,7 +4,7 @@
 
 Sampler::Sampler(const shared_ptr<vector<Instance>>& training, double alpha,
                  double pexpand, double pchild, double pterm,
-                 RandomGenerator& generator) :
+                 RandomGenerator& generator, Dictionary& dictionary) :
     training(training),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -13,16 +13,18 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training, double alpha,
     prob_stop_str(log(pterm)),
     prob_cont_str(log(1 - pterm)),
     generator(generator),
-    uniform_distribution(0, 1) {
+    uniform_distribution(0, 1),
+    dictionary(dictionary) {
   set<int> non_terminals, source_terminals, target_terminals;
   for (auto instance: *training) {
     for (auto node: instance.first) {
-      if (!counts.count(node.GetTag())) {
-        counts[node.GetTag()] = RuleCounts(alpha, false);
+      if (!non_terminals.count(node.GetTag())) {
         non_terminals.insert(node.GetTag());
-        if (node.IsSetWord()) {
-          source_terminals.insert(node.GetWord());
-        }
+        counts[node.GetTag()] = RuleCounts(alpha, false);
+      }
+
+      if (node.IsSetWord()) {
+        source_terminals.insert(node.GetWord());
       }
     }
 
@@ -48,7 +50,9 @@ void Sampler::Sample(int iterations) {
       AlignedTree& tree = instance.first;
       vector<NodeIter> schedule;
       for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
-        schedule.push_back(node);
+        if (node != tree.begin()) {
+          schedule.push_back(node);
+        }
       }
 
       random_shuffle(schedule.begin(), schedule.end());
@@ -87,9 +91,9 @@ void Sampler::SampleAlignments(const Instance& instance,
     auto legal_spans = GetLegalSpans(tree, node, ancestor);
     for (auto span: legal_spans) {
       node->SetSpan(span);
-      double ancestor_prob = ComputeLogProbability(GetRule(instance, ancestor));
-      double node_prob = ComputeLogProbability(GetRule(instance, node));
-      probs.push_back(ancestor_prob + node_prob);
+      const Rule& ancestor_rule = GetRule(instance, ancestor);
+      const Rule& node_rule = GetRule(instance, node);
+      probs.push_back(ComputeLogProbability(ancestor_rule, node_rule));
     }
 
     // Compute total probability
@@ -108,6 +112,7 @@ void Sampler::SampleAlignments(const Instance& instance,
     if (value <= probs[0]) {
       node->SetSplitNode(false);
       node->SetSpan(make_pair(-1, -1));
+      IncrementRuleCount(GetRule(instance, ancestor));
       continue;
     } else {
       node->SetSplitNode(true);
@@ -117,6 +122,8 @@ void Sampler::SampleAlignments(const Instance& instance,
     for (size_t i = 1; i < probs.size(); ++i) {
       if (value <= probs[i]) {
         node->SetSpan(legal_spans[i - 1]);
+        IncrementRuleCount(GetRule(instance, ancestor));
+        IncrementRuleCount(GetRule(instance, node));
         break;
       }
 
@@ -140,7 +147,7 @@ String Sampler::ConstructRuleTargetSide(const AlignedTree& fragment,
   vector<int> frontier(root_span.second, -1);
   int num_split_leaves = 0;
   for (auto leaf = fragment.begin_leaf(); leaf != fragment.end_leaf(); ++leaf) {
-    if (leaf != fragment.begin() && !leaf->IsSetWord()) {
+    if (leaf != fragment.begin()) {
       pair<int, int> span = leaf->GetSpan();
       for (int j = span.first; j < span.second; ++j) {
         frontier[j] = num_split_leaves;
@@ -213,8 +220,8 @@ vector<pair<int, int>> Sampler::GetLegalSpans(const AlignedTree& tree,
 double Sampler::ComputeLogBaseProbability(const Rule& rule) {
   int vars = 0;
   double prob_frag = 0;
-  AlignedTree frag = rule.first;
-  for (auto node = frag.begin(); node != frag.end(); ++node) {
+  const AlignedTree& frag = rule.first;
+  for (NodeIter node = frag.begin(); node != frag.end(); ++node) {
     if (node != frag.begin()) {
       prob_frag += prob_nt;
       if (node->IsSplitNode()) {
@@ -229,16 +236,16 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
       if (node->IsSetWord()) {
         prob_frag += prob_st;
       } else {
-        prob_frag += prob_cont_child * (node.number_of_children() - 1);
+        prob_frag += prob_cont_child * ((int) node.number_of_children() - 1);
         prob_frag += prob_stop_child;
       }
     }
   }
 
   double prob_str = prob_stop_str;
-  prob_str = (prob_tt + prob_cont_str) * (rule.second.size() - vars);
+  prob_str += (prob_tt + prob_cont_str) * (rule.second.size() - vars);
   for (int i = 1; i <= vars; ++i) {
-    prob_str += log(rule.second.size() - vars + i);
+    prob_str -= log(rule.second.size() - vars + i);
   }
 
   return prob_frag + prob_str;
@@ -246,18 +253,25 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 
 double Sampler::ComputeLogProbability(const Rule& rule) {
   int tag = rule.first.begin()->GetTag();
-  RuleCounts count = counts[tag];
-  return count.log_prob(rule, ComputeLogBaseProbability(rule));
+  return counts[tag].log_prob(rule, ComputeLogBaseProbability(rule));
+}
+
+double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2) {
+  double prob_r1 = ComputeLogProbability(r1);
+
+  int tag = r2.first.begin()->GetTag();
+  int same_rule = r1 == r2;
+  int same_tag = r1.first.begin()->GetTag() == tag;
+  return prob_r1 + counts[tag].log_prob(r2, same_rule, same_tag,
+                                        ComputeLogBaseProbability(r2));
 }
 
 void Sampler::IncrementRuleCount(const Rule& rule) {
   int tag = rule.first.begin()->GetTag();
-  RuleCounts count = counts[tag];
-  count.increment(rule);
+  counts[tag].increment(rule);
 }
 
 void Sampler::DecrementRuleCount(const Rule& rule) {
   int tag = rule.first.begin()->GetTag();
-  RuleCounts count = counts[tag];
-  count.decrement(rule);
+  counts[tag].decrement(rule);
 }

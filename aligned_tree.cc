@@ -13,6 +13,43 @@ vector<AlignedNode> AlignedTree::GetVariables() {
   return variables;
 }
 
+NodeIter AlignedTree::GetSplitAncestor(const NodeIter& node) const {
+  NodeIter ancestor = parent(node);
+  while (!ancestor->IsSplitNode()) {
+    ancestor = parent(ancestor);
+  }
+  return ancestor;
+}
+
+AlignedTree AlignedTree::GetFragment(const NodeIter& node) const {
+  AlignedTree fragment;
+  fragment.set_head(*node);
+  ConstructFragment(node, fragment, fragment.begin());
+  return fragment;
+}
+
+void AlignedTree::ConstructFragment(const NodeIter& node,
+                                    AlignedTree& fragment,
+                                    const NodeIter& fragment_node) const {
+  for (sibling_iterator sibling = begin(node); sibling != end(node); ++sibling) {
+    auto new_node = fragment.append_child(fragment_node, *sibling);
+    if (!sibling->IsSplitNode()) {
+      ConstructFragment(sibling, fragment, new_node);
+    }
+  }
+}
+
+vector<NodeIter> AlignedTree::GetSplitDescendants(const NodeIter& node) const {
+  vector<NodeIter> descendants;
+  for (NodeIter it = node.begin(); it != node.end(); ++it) {
+    if (it->IsSplitNode()) {
+      descendants.push_back(it);
+      it.skip_children();
+    }
+  }
+  return descendants;
+}
+
 bool AlignedTree::operator<(const AlignedTree& tree) const {
   if (size() != tree.size()) {
     return size() < tree.size();
@@ -33,39 +70,6 @@ bool AlignedTree::operator<(const AlignedTree& tree) const {
   return false;
 }
 
-NodeIter AlignedTree::GetSplitAncestor(const NodeIter& node) const {
-  NodeIter ancestor = parent(node);
-  while (!ancestor->IsSplitNode()) {
-    ancestor = parent(ancestor);
-  }
-  return ancestor;
-}
-
-AlignedTree AlignedTree::GetFragment(const NodeIter& node) const {
-  AlignedTree fragment;
-  fragment.set_head(*node);
-  ConstructFragment(node, fragment, fragment.begin());
-  return fragment;
-}
-
-void AlignedTree::ConstructFragment(const NodeIter& node,
-                                    AlignedTree& fragment,
-                                    const NodeIter& fragment_node) const {
-  for (auto sibling = begin(node); sibling != end(node); ++sibling) {
-    if (!sibling->IsSplitNode()) {
-      auto new_node = fragment.append_child(fragment_node);
-      ConstructFragment(sibling, fragment, new_node);
-    }
-  }
-}
-
-vector<NodeIter> AlignedTree::GetSplitDescendants(const NodeIter& node) const {
-  vector<NodeIter> descendants;
-  for (auto it = node.begin(); it != node.end(); ++it) {
-    if (it->IsSplitNode()) {
-      descendants.push_back(it);
-      it.skip_children();
-    }
-  }
-  return descendants;
+bool AlignedTree::operator==(const AlignedTree& tree) const {
+  return !(*this < tree || tree < *this);
 }

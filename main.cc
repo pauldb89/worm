@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   RandomGenerator generator(seed);
   Sampler sampler(training, vm["alpha"].as<double>(),
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
-                  vm["pterm"].as<double>(), generator);
+                  vm["pterm"].as<double>(), generator, dictionary);
   sampler.Sample(vm["iterations"].as<int>());
 
   return 0;

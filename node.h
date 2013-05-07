@@ -43,11 +43,13 @@ class StringNode {
  public:
   StringNode(int word, int var_index);
 
-  int GetWord();
+  int GetWord() const;
 
-  int GetVarIndex();
+  int GetVarIndex() const;
 
   bool operator<(const StringNode& node) const;
+
+  bool operator==(const StringNode& node) const;
 
  private:
   int word, var_index;

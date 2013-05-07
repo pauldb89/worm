@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "aligned_tree.h"
+#include "dictionary.h"
 #include "restaurant.h"
 #include "util.h"
 
@@ -19,7 +20,7 @@ class Sampler {
  public:
   Sampler(const shared_ptr<vector<Instance>>& training, double alpha,
           double pexpand, double pchild, double pterm,
-          RandomGenerator& generator);
+          RandomGenerator& generator, Dictionary& dictionary);
 
   void Sample(int iterations);
 
@@ -44,6 +45,8 @@ class Sampler {
 
   double ComputeLogProbability(const Rule& rule);
 
+  double ComputeLogProbability(const Rule& rule1, const Rule& rule2);
+
   void IncrementRuleCount(const Rule& rule);
 
   void DecrementRuleCount(const Rule& rule);
@@ -58,6 +61,9 @@ class Sampler {
 
   RandomGenerator& generator;
   uniform_real_distribution<double> uniform_distribution;
+
+  // TODO(pauldb): Remove dictionary if it's only used for debugging.
+  Dictionary& dictionary;
 };
 
 #endif

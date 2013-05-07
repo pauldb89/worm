@@ -15,7 +15,8 @@ Instance ReadInstance(ifstream& tree_infile,
                       Dictionary& dictionary) {
   AlignedTree tree = ReadParseTree(tree_infile, dictionary);
   String sentence = ReadString(string_infile, dictionary);
-
+  tree.begin()->SetSplitNode(true);
+  tree.begin()->SetSpan(make_pair(0, sentence.size()));
   return Instance(tree, sentence);
 }
 
