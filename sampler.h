@@ -27,10 +27,11 @@ class Sampler {
  private:
   void InitializeRuleCounts();
 
-  void SampleAlignments(const Instance& instance,
-                        const vector<NodeIter>& schedule);
+  void SampleAlignments(const Instance& instance);
 
-  void SampleSwaps(const vector<NodeIter>& schedule);
+  void SampleSwaps(const Instance& instance);
+
+  vector<NodeIter> GetRandomSchedule(const AlignedTree& tree);
 
   Rule GetRule(const Instance& instance, const NodeIter& node);
 
@@ -43,9 +44,11 @@ class Sampler {
 
   double ComputeLogBaseProbability(const Rule& rule);
 
-  double ComputeLogProbability(const Rule& rule);
+  double ComputeLogProbability(const Rule& r);
 
-  double ComputeLogProbability(const Rule& rule1, const Rule& rule2);
+  double ComputeLogProbability(const Rule& r1, const Rule& r2);
+
+  double ComputeLogProbability(const Rule& r1, const Rule& r2, const Rule& r3);
 
   void IncrementRuleCount(const Rule& rule);
 

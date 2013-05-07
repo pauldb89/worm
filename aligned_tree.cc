@@ -2,6 +2,10 @@
 
 typedef AlignedTree::iterator NodeIter;
 
+int AlignedTree::GetRootTag() const {
+  return begin()->GetTag();
+}
+
 vector<AlignedNode> AlignedTree::GetVariables() {
   vector<AlignedNode> variables;
   for (auto node: *this) {

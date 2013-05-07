@@ -46,18 +46,8 @@ void Sampler::Sample(int iterations) {
     random_shuffle(training->begin(), training->end());
 
     for (auto& instance: *training) {
-      // Randomly shuffle nodes in the current parse tree.
-      AlignedTree& tree = instance.first;
-      vector<NodeIter> schedule;
-      for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
-        if (node != tree.begin()) {
-          schedule.push_back(node);
-        }
-      }
-
-      random_shuffle(schedule.begin(), schedule.end());
-      SampleAlignments(instance, schedule);
-      SampleSwaps(schedule);
+      SampleAlignments(instance);
+      SampleSwaps(instance);
     }
   }
 }
@@ -69,9 +59,11 @@ void Sampler::InitializeRuleCounts() {
   }
 }
 
-void Sampler::SampleAlignments(const Instance& instance,
-                               const vector<NodeIter>& schedule) {
+void Sampler::SampleAlignments(const Instance& instance) {
   const AlignedTree& tree = instance.first;
+  vector<NodeIter> schedule = GetRandomSchedule(tree);
+
+  // For each node, sample a new alignment span.
   for (auto node: schedule) {
     auto ancestor = tree.GetSplitAncestor(node);
 
@@ -132,7 +124,87 @@ void Sampler::SampleAlignments(const Instance& instance,
   }
 }
 
-void Sampler::SampleSwaps(const vector<NodeIter>& schedule) {
+void Sampler::SampleSwaps(const Instance& instance) {
+  const AlignedTree& tree = instance.first;
+  set<AlignedNode> frontier;
+  for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
+    // We can only swap descendants of split nodes.
+    if (!node->IsSplitNode()) {
+      continue;
+    }
+
+    vector<NodeIter> descendants = tree.GetSplitDescendants(node);
+    // If there are no descendants, we have nothing to sample.
+    if (descendants.empty()) {
+      frontier.insert(*node);
+      continue;
+    }
+
+    // We only swap descendants located on the frontier because these nodes have
+    // no descendants (and no additional constraints).
+    descendants.erase(remove_if(descendants.begin(), descendants.end(),
+        [&frontier](const NodeIter& node) -> bool {
+          return frontier.count(*node) == 0;
+        }), descendants.end());
+
+    random_shuffle(descendants.begin(), descendants.end());
+    // Sample swaps for consecutive pairs of descendants.
+    for (size_t i = 1; i < descendants.size(); i += 2) {
+      const Rule& rule1 = GetRule(instance, node);
+      const Rule& rule2 = GetRule(instance, descendants[i - 1]);
+      const Rule& rule3 = GetRule(instance, descendants[i]);
+      DecrementRuleCount(rule1);
+      DecrementRuleCount(rule2);
+      DecrementRuleCount(rule3);
+
+      double prob_no_swap = ComputeLogProbability(rule1, rule2, rule3);
+
+      // Swap spans.
+      auto span1 = descendants[i - 1]->GetSpan();
+      auto span2 = descendants[i]->GetSpan();
+      descendants[i - 1]->SetSpan(span2);
+      descendants[i]->SetSpan(span1);
+
+      const Rule& srule1 = GetRule(instance, node);
+      const Rule& srule2 = GetRule(instance, descendants[i - 1]);
+      const Rule& srule3 = GetRule(instance, descendants[i]);
+
+      double prob_swap = ComputeLogProbability(srule1, srule2, srule3);
+
+      // Normalize probabilities.
+      double total_prob = Log<double>::add(prob_no_swap, prob_swap);
+      prob_swap -= total_prob;
+      prob_no_swap -= total_prob;
+
+      // Sample.
+      double value = log(uniform_distribution(generator));
+      if (value <= prob_no_swap) {
+        // Replace with original spans.
+        descendants[i - 1]->SetSpan(span1);
+        descendants[i]->SetSpan(span2);
+
+        IncrementRuleCount(rule1);
+        IncrementRuleCount(rule2);
+        IncrementRuleCount(rule3);
+      } else {
+        IncrementRuleCount(srule1);
+        IncrementRuleCount(srule2);
+        IncrementRuleCount(srule3);
+      }
+    }
+  }
+}
+
+vector<NodeIter> Sampler::GetRandomSchedule(const AlignedTree& tree) {
+  vector<NodeIter> schedule;
+  for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
+    if (node != tree.begin()) {
+      schedule.push_back(node);
+    }
+  }
+
+  random_shuffle(schedule.begin(), schedule.end());
+  return schedule;
 }
 
 Rule Sampler::GetRule(const Instance& instance, const NodeIter& node) {
@@ -252,26 +324,37 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 }
 
 double Sampler::ComputeLogProbability(const Rule& rule) {
-  int tag = rule.first.begin()->GetTag();
+  int tag = rule.first.GetRootTag();
   return counts[tag].log_prob(rule, ComputeLogBaseProbability(rule));
 }
 
 double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2) {
   double prob_r1 = ComputeLogProbability(r1);
 
-  int tag = r2.first.begin()->GetTag();
-  int same_rule = r1 == r2;
-  int same_tag = r1.first.begin()->GetTag() == tag;
-  return prob_r1 + counts[tag].log_prob(r2, same_rule, same_tag,
+  int tag = r2.first.GetRootTag();
+  int same_rules = r1 == r2;
+  int same_tags = r1.first.GetRootTag() == tag;
+  return prob_r1 + counts[tag].log_prob(r2, same_rules, same_tags,
                                         ComputeLogBaseProbability(r2));
 }
 
+double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2,
+                                      const Rule& r3) {
+  double prob_r12 = ComputeLogProbability(r1, r2);
+
+  int tag = r3.first.GetRootTag();
+  int same_rules = (r1 == r3) + (r2 == r3);
+  int same_tags = r1.first.GetRootTag() == tag || r2.first.GetRootTag() == tag;
+  return prob_r12 + counts[tag].log_prob(r3, same_rules, same_tags,
+                                         ComputeLogBaseProbability(r3));
+}
+
 void Sampler::IncrementRuleCount(const Rule& rule) {
-  int tag = rule.first.begin()->GetTag();
+  int tag = rule.first.GetRootTag();
   counts[tag].increment(rule);
 }
 
 void Sampler::DecrementRuleCount(const Rule& rule) {
-  int tag = rule.first.begin()->GetTag();
+  int tag = rule.first.GetRootTag();
   counts[tag].decrement(rule);
 }

@@ -15,6 +15,8 @@ class AlignedTree: public tree<AlignedNode> {
                                ifstream& string_infile,
                                Dictionary& dictionary);
 
+  int GetRootTag() const;
+
   vector<AlignedNode> GetVariables();
 
   iterator GetSplitAncestor(const iterator& node) const;
