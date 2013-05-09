@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
           "File continaing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
           "File continaing target strings")
-      ("output", po::value<string>()->required(),
+      ("output,o", po::value<string>()->required(),
           "File for writing the grammar")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")

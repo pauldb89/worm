@@ -363,13 +363,6 @@ void Sampler::DecrementRuleCount(const Rule& rule) {
 void Sampler::SerializeGrammar(ofstream& gout) {
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
-    for (auto node: tree) {
-      auto span = node.GetSpan();
-      gout << dictionary.GetToken(node.GetTag()) << " " << span.first << " "
-           << span.second << endl;
-    }
-    gout << "-----------" << endl;
-
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);
