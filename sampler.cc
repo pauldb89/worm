@@ -43,7 +43,7 @@ void Sampler::Sample(int iterations) {
 
   for (int iter = 0; iter < iterations; ++iter) {
     random_shuffle(training->begin(), training->end());
-    cerr << iter << endl;
+    cerr << "Iteration: " << iter << endl;
 
     for (auto& instance: *training) {
       SampleAlignments(instance);
@@ -220,7 +220,7 @@ String Sampler::ConstructRuleTargetSide(const AlignedTree& fragment,
   vector<int> frontier(root_span.second, -1);
   int num_split_leaves = 0;
   for (auto leaf = fragment.begin_leaf(); leaf != fragment.end_leaf(); ++leaf) {
-    if (leaf != fragment.begin()) {
+    if (leaf != fragment.begin() && leaf->IsSplitNode()) {
       pair<int, int> span = leaf->GetSpan();
       for (int j = span.first; j < span.second; ++j) {
         frontier[j] = num_split_leaves;
@@ -358,4 +358,44 @@ void Sampler::IncrementRuleCount(const Rule& rule) {
 void Sampler::DecrementRuleCount(const Rule& rule) {
   int tag = rule.first.GetRootTag();
   counts[tag].decrement(rule);
+}
+
+void Sampler::SerializeGrammar(ofstream& gout) {
+  for (auto instance: *training) {
+    const AlignedTree& tree = instance.first;
+    for (auto node: tree) {
+      auto span = node.GetSpan();
+      gout << dictionary.GetToken(node.GetTag()) << " " << span.first << " "
+           << span.second << endl;
+    }
+    gout << "-----------" << endl;
+
+    for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        Rule rule = GetRule(instance, node);
+        const AlignedTree& frag = rule.first;
+        const String& target_string = rule.second;
+
+        gout << dictionary.GetToken(frag.GetRootTag()) << " ||| ";
+
+        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+          if (leaf == frag.begin() || !leaf->IsSplitNode()) {
+            gout << dictionary.GetToken(leaf->GetWord()) << " ";
+          } else {
+            gout << dictionary.GetToken(leaf->GetTag()) << " ";
+          }
+        }
+        gout << "||| ";
+
+        for (auto entry: target_string) {
+          if (entry.IsSetWord()) {
+            gout << dictionary.GetToken(entry.GetWord()) << " ";
+          } else {
+            gout << "#" << entry.GetVarIndex() << " ";
+          }
+        }
+        gout << "\n";
+      }
+    }
+  }
 }

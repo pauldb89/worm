@@ -43,6 +43,8 @@ class StringNode {
  public:
   StringNode(int word, int var_index);
 
+  bool IsSetWord() const;
+
   int GetWord() const;
 
   int GetVarIndex() const;

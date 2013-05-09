@@ -23,6 +23,8 @@ int main(int argc, char **argv) {
           "File continaing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
           "File continaing target strings")
+      ("output", po::value<string>()->required(),
+          "File for writing the grammar")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100),
@@ -40,7 +42,6 @@ int main(int argc, char **argv) {
   po::store(po::parse_command_line(argc, argv, desc), vm);
 
   if (vm.count("help")) {
-    cout << BOOST_VERSION << endl;
     cout << desc << endl;
     return 0;
   }
@@ -72,6 +73,9 @@ int main(int argc, char **argv) {
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
                   vm["pterm"].as<double>(), generator, dictionary);
   sampler.Sample(vm["iterations"].as<int>());
+
+  ofstream grammar_file(vm["output"].as<string>().c_str());
+  sampler.SerializeGrammar(grammar_file);
 
   return 0;
 }

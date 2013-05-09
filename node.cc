@@ -56,6 +56,10 @@ bool AlignedNode::operator!=(const AlignedNode& node) const {
 StringNode::StringNode(int word, int var_index) :
     word(word), var_index(var_index) {}
 
+bool StringNode::IsSetWord() const {
+  return word != -1;
+}
+
 int StringNode::GetWord() const {
   return word;
 }

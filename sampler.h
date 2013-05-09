@@ -24,6 +24,8 @@ class Sampler {
 
   void Sample(int iterations);
 
+  void SerializeGrammar(ofstream& gout);
+
  private:
   void InitializeRuleCounts();
 
