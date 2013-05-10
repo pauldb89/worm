@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <stack>
@@ -27,11 +28,14 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
 
   // TODO(pauldb): Replace with std::regex and std::sregex_token_iterator when
   // g++ will support both.
-  boost::regex r("[()]|[^\\s()]+");
+  boost::regex r("[()]|[^\\s()][^\\s]*[^\\s()]|[^\\s()]+");
   boost::sregex_token_iterator begin(line.begin(), line.end(), r), end;
   stack<AlignedTree::iterator> st;
   for (auto it = begin; it != end; ++it) {
-    if (*it == "(") {
+    // We need to careful with "(" and ")" symbols in the original sentence.
+    // (That's why we have complicated checks for entering and leaving a
+    // subtree.)
+    if (*it == "(" && *next(it) != ")") {
       // Create an empty node and add it to the stack (enter subtree).
       if (st.empty()) {
         // Create root node.
@@ -40,7 +44,8 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
         // Insert a new child to the node at top of the stack.
         st.push(tree.append_child(st.top(), AlignedNode()));
       }
-    } else if (*it == ")") {
+    } else if (*it == ")" &&
+               (st.top()->IsSetWord() || st.top().number_of_children())) {
       // Remove node from the top of the stack (leave subtree).
       st.pop();
     } else if (!st.top()->IsSetTag()) {
@@ -52,6 +57,8 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
       st.top()->SetWord(dictionary.GetIndex(*it));
     }
   }
+
+  assert(st.empty());
 
   return tree;
 }

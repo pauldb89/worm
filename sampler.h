@@ -16,11 +16,15 @@ typedef pair<AlignedTree, String> Rule;
 typedef Restaurant<Rule> RuleCounts;
 typedef AlignedTree::iterator NodeIter;
 
+class TranslationTable;
+
 class Sampler {
  public:
-  Sampler(const shared_ptr<vector<Instance>>& training, double alpha,
-          double pexpand, double pchild, double pterm,
-          RandomGenerator& generator, Dictionary& dictionary);
+  Sampler(const shared_ptr<vector<Instance>>& training, Dictionary& dictionary,
+          const shared_ptr<TranslationTable>& forward_table,
+          const shared_ptr<TranslationTable>& backward_table,
+          RandomGenerator& generator, double alpha, double pexpand,
+          double pchild, double pterm);
 
   void Sample(int iterations);
 
@@ -59,16 +63,16 @@ class Sampler {
   shared_ptr<vector<Instance>> training;
   unordered_map<int, RuleCounts> counts;
 
+  Dictionary& dictionary;
+  shared_ptr<TranslationTable> forward_table;
+  shared_ptr<TranslationTable> backward_table;
+  RandomGenerator& generator;
+  uniform_real_distribution<double> uniform_distribution;
+
   double prob_expand, prob_not_expand;
   double prob_stop_child, prob_cont_child;
   double prob_stop_str, prob_cont_str;
   double prob_nt, prob_st, prob_tt;
-
-  RandomGenerator& generator;
-  uniform_real_distribution<double> uniform_distribution;
-
-  // TODO(pauldb): Remove dictionary if it's only used for debugging.
-  Dictionary& dictionary;
 };
 
 #endif

@@ -10,6 +10,7 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 #include "sampler.h"
+#include "translation_table.h"
 #include "util.h"
 
 using namespace std;
@@ -36,7 +37,11 @@ int main(int argc, char **argv) {
       ("pterm", po::value<double>()->default_value(0.5),
           "Param. for the geom. distr. for the number of target terminals")
       ("seed", po::value<unsigned int>()->default_value(0),
-          "Seed for random generator");
+          "Seed for random generator")
+      ("ibm1-forward", po::value<string>(),
+          "Path to the IBM Model 1 translation table p(t | s)")
+      ("ibm1-backward", po::value<string>(),
+          "Path to the IBM Model 1 translation table p(s | t)");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -53,6 +58,7 @@ int main(int argc, char **argv) {
   shared_ptr<vector<Instance>> training = make_shared<vector<Instance>>();
   ifstream tree_infile(vm["trees"].as<string>().c_str());
   ifstream string_infile(vm["strings"].as<string>().c_str());
+  int tree_index = 0;
   while (true) {
     tree_infile >> ws;
     string_infile >> ws;
@@ -60,7 +66,20 @@ int main(int argc, char **argv) {
       break;
     }
 
+    ++tree_index;
+    if (tree_index % 100000 == 0) {
+      cerr << tree_index << endl;
+    }
     training->push_back(ReadInstance(tree_infile, string_infile, dictionary));
+  }
+
+  shared_ptr<TranslationTable> forward_table, backward_table;
+  if (vm.count("ibm1-forward") && vm.count("ibm1-backward")) {
+    ifstream forward_infile(vm["ibm1-forward"].as<string>());
+    forward_table = make_shared<TranslationTable>(forward_infile, dictionary);
+
+    ifstream backward_infile(vm["ibm1-backward"].as<string>());
+    backward_table = make_shared<TranslationTable>(backward_infile, dictionary);
   }
 
   // Induce tree to string grammar via Gibbs sampling.
@@ -69,9 +88,10 @@ int main(int argc, char **argv) {
     seed = time(NULL);
   }
   RandomGenerator generator(seed);
-  Sampler sampler(training, vm["alpha"].as<double>(),
+  Sampler sampler(training, dictionary, forward_table, backward_table,
+                  generator, vm["alpha"].as<double>(),
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
-                  vm["pterm"].as<double>(), generator, dictionary);
+                  vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
 
   ofstream grammar_file(vm["output"].as<string>().c_str());

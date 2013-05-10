@@ -1,20 +1,26 @@
 #include "sampler.h"
 
 #include "node.h"
+#include "translation_table.h"
 
-Sampler::Sampler(const shared_ptr<vector<Instance>>& training, double alpha,
-                 double pexpand, double pchild, double pterm,
-                 RandomGenerator& generator, Dictionary& dictionary) :
+Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
+                 Dictionary& dictionary,
+                 const shared_ptr<TranslationTable>& forward_table,
+                 const shared_ptr<TranslationTable>& backward_table,
+                 RandomGenerator& generator,
+                 double alpha, double pexpand, double pchild, double pterm) :
     training(training),
+    dictionary(dictionary),
+    forward_table(forward_table),
+    backward_table(backward_table),
+    generator(generator),
+    uniform_distribution(0, 1),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
     prob_stop_child(log(pchild)),
     prob_cont_child(log(1 - pchild)),
     prob_stop_str(log(pterm)),
-    prob_cont_str(log(1 - pterm)),
-    generator(generator),
-    uniform_distribution(0, 1),
-    dictionary(dictionary) {
+    prob_cont_str(log(1 - pterm)) {
   set<int> non_terminals, source_terminals, target_terminals;
   for (auto instance: *training) {
     for (auto node: instance.first) {
@@ -315,10 +321,36 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
     }
   }
 
-  double prob_str = prob_stop_str;
-  prob_str += (prob_tt + prob_cont_str) * (rule.second.size() - vars);
+  double prob_str = 0.0;
+  const String& target_string = rule.second;
+  if (forward_table == nullptr || backward_table == nullptr) {
+    prob_str = prob_stop_str;
+    prob_str += (prob_tt + prob_cont_str) * (target_string.size() - vars);
+  } else {
+    vector<int> source_words;
+    for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+      if (leaf->IsSetWord()) {
+        source_words.push_back(leaf->GetWord());
+      }
+    }
+
+    vector<int> target_words;
+    for (auto string_node: target_string) {
+      if (string_node.IsSetWord()) {
+        target_words.push_back(string_node.GetWord());
+      }
+    }
+
+    // Use geometric mean on bidirectional IBM Model 1 probabilities.
+    double prob_forward = forward_table->ComputeLogProbability(
+        source_words, target_words);
+    double prob_backward = backward_table->ComputeLogProbability(
+        source_words, target_words);
+    prob_str = 0.5 * (prob_forward + prob_backward);
+  }
+
   for (int i = 1; i <= vars; ++i) {
-    prob_str -= log(rule.second.size() - vars + i);
+    prob_str -= log(target_string.size() - vars + i);
   }
 
   return prob_frag + prob_str;
