@@ -1,5 +1,9 @@
 #include "aligned_tree.h"
 
+#include <iostream>
+
+#include "dictionary.h"
+
 typedef AlignedTree::iterator NodeIter;
 
 int AlignedTree::GetRootTag() const {
@@ -52,6 +56,18 @@ vector<NodeIter> AlignedTree::GetSplitDescendants(const NodeIter& node) const {
     }
   }
   return descendants;
+}
+
+void AlignedTree::DisplayTree(Dictionary& dictionary) const {
+  int current_depth = 0;
+  for (auto it = begin_breadth_first(); it != end_breadth_first(); ++it) {
+    if (depth(it) != current_depth) {
+      cerr << endl;
+      current_depth = depth(it);
+    }
+    cerr << dictionary.GetToken(it->GetTag()) << " ";
+  }
+  cerr << endl;
 }
 
 bool AlignedTree::operator<(const AlignedTree& tree) const {

@@ -31,7 +31,7 @@ double TranslationTable::ComputeLogProbability(
       sum += it->second;
     }
 
-    result += log(sum / target_words.size());
+    result += log(sum / (target_words.size() + 1));
   }
 
   return result;
