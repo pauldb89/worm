@@ -16,11 +16,13 @@ typedef pair<AlignedTree, String> Rule;
 typedef Restaurant<Rule> RuleCounts;
 typedef AlignedTree::iterator NodeIter;
 
+class PCFGTable;
 class TranslationTable;
 
 class Sampler {
  public:
   Sampler(const shared_ptr<vector<Instance>>& training, Dictionary& dictionary,
+          const shared_ptr<PCFGTable>& pcfg_table,
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& backward_table,
           RandomGenerator& generator, double alpha, double pexpand,
@@ -64,6 +66,7 @@ class Sampler {
   unordered_map<int, RuleCounts> counts;
 
   Dictionary& dictionary;
+  shared_ptr<PCFGTable> pcfg_table;
   shared_ptr<TranslationTable> forward_table;
   shared_ptr<TranslationTable> backward_table;
   RandomGenerator& generator;

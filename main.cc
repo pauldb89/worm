@@ -9,6 +9,7 @@
 
 #include "aligned_tree.h"
 #include "dictionary.h"
+#include "pcfg_table.h"
 #include "sampler.h"
 #include "translation_table.h"
 #include "util.h"
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
           "Param. for the geom. distr. for the number of target terminals")
       ("seed", po::value<unsigned int>()->default_value(0),
           "Seed for random generator")
+      ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
       ("ibm1-forward", po::value<string>(),
           "Path to the IBM Model 1 translation table p(t | s)")
       ("ibm1-backward", po::value<string>(),
@@ -73,6 +75,11 @@ int main(int argc, char **argv) {
     training->push_back(ReadInstance(tree_infile, string_infile, dictionary));
   }
 
+  shared_ptr<PCFGTable> pcfg_table;
+  if (vm.count("pcfg")) {
+    pcfg_table = make_shared<PCFGTable>(training);
+  }
+
   shared_ptr<TranslationTable> forward_table, backward_table;
   if (vm.count("ibm1-forward") && vm.count("ibm1-backward")) {
     ifstream forward_infile(vm["ibm1-forward"].as<string>());
@@ -88,8 +95,8 @@ int main(int argc, char **argv) {
     seed = time(NULL);
   }
   RandomGenerator generator(seed);
-  Sampler sampler(training, dictionary, forward_table, backward_table,
-                  generator, vm["alpha"].as<double>(),
+  Sampler sampler(training, dictionary, pcfg_table, forward_table,
+                  backward_table, generator, vm["alpha"].as<double>(),
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
                   vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());

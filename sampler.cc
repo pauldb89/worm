@@ -1,16 +1,19 @@
 #include "sampler.h"
 
 #include "node.h"
+#include "pcfg_table.h"
 #include "translation_table.h"
 
 Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  Dictionary& dictionary,
+                 const shared_ptr<PCFGTable>& pcfg_table,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& backward_table,
                  RandomGenerator& generator,
                  double alpha, double pexpand, double pchild, double pterm) :
     training(training),
     dictionary(dictionary),
+    pcfg_table(pcfg_table),
     forward_table(forward_table),
     backward_table(backward_table),
     generator(generator),
@@ -302,21 +305,41 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
   const AlignedTree& frag = rule.first;
   for (NodeIter node = frag.begin(); node != frag.end(); ++node) {
     if (node != frag.begin()) {
-      prob_frag += prob_nt;
+      // See if the current nonterminal should count.
+      if (pcfg_table == nullptr) {
+        prob_frag += prob_nt;
+      }
+
+      // Check if the node expands or not.
       if (node->IsSplitNode()) {
-        prob_frag += prob_expand;
+        prob_frag += prob_not_expand;
         ++vars;
       } else {
-        prob_frag += prob_not_expand;
+        prob_frag += prob_expand;
       }
     }
 
+    // Compute the probability associated with the rule that's currently
+    // expanded.
     if (node == frag.begin() || !node->IsSplitNode()) {
-      if (node->IsSetWord()) {
-        prob_frag += prob_st;
+      if (pcfg_table == nullptr) {
+        if (node->IsSetWord()) {
+          prob_frag += prob_st;
+        } else {
+          prob_frag += prob_cont_child * ((int) node.number_of_children() - 1);
+          prob_frag += prob_stop_child;
+        }
       } else {
-        prob_frag += prob_cont_child * ((int) node.number_of_children() - 1);
-        prob_frag += prob_stop_child;
+        vector<int> rhs;
+        if (node.number_of_children() > 0) {
+          for (auto child = frag.begin(node); child != frag.end(node); ++child) {
+            rhs.push_back(child->GetTag());
+          }
+        } else {
+          rhs.push_back(node->GetWord());
+        }
+
+        prob_frag += pcfg_table->GetLogProbability(node->GetTag(), rhs);
       }
     }
   }
