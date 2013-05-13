@@ -1,7 +1,7 @@
 #include "node.h"
 
 AlignedNode::AlignedNode() :
-    tag(-1), word(-1), start(-1), end(-1), split_node(false) {}
+    tag(-1), word(-1), word_index(-1), start(-1), end(-1), split_node(false) {}
 
 bool AlignedNode::IsSetTag() {
   return tag != -1;
@@ -25,6 +25,14 @@ int AlignedNode::GetWord() {
 
 void AlignedNode::SetWord(int value) {
   word = value;
+}
+
+int AlignedNode::GetWordIndex() {
+  return word_index;
+}
+
+void AlignedNode::SetWordIndex(int value) {
+  word_index = value;
 }
 
 bool AlignedNode::IsSplitNode() {
@@ -53,8 +61,8 @@ bool AlignedNode::operator!=(const AlignedNode& node) const {
 }
 
 
-StringNode::StringNode(int word, int var_index) :
-    word(word), var_index(var_index) {}
+StringNode::StringNode(int word, int word_index, int var_index) :
+    word(word), word_index(word_index), var_index(var_index) {}
 
 bool StringNode::IsSetWord() const {
   return word != -1;
@@ -62,6 +70,10 @@ bool StringNode::IsSetWord() const {
 
 int StringNode::GetWord() const {
   return word;
+}
+
+int StringNode::GetWordIndex() const {
+  return word_index;
 }
 
 int StringNode::GetVarIndex() const {

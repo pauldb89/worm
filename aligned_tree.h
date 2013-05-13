@@ -17,8 +17,6 @@ class AlignedTree: public tree<AlignedNode> {
 
   int GetRootTag() const;
 
-  vector<AlignedNode> GetVariables();
-
   iterator GetSplitAncestor(const iterator& node) const;
 
   AlignedTree GetFragment(const iterator& node) const;

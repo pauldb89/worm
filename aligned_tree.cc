@@ -10,22 +10,12 @@ int AlignedTree::GetRootTag() const {
   return begin()->GetTag();
 }
 
-vector<AlignedNode> AlignedTree::GetVariables() {
-  vector<AlignedNode> variables;
-  for (auto node: *this) {
-    if (node.IsSplitNode()) {
-      variables.push_back(node);
-    }
-  }
-
-  return variables;
-}
-
 NodeIter AlignedTree::GetSplitAncestor(const NodeIter& node) const {
   NodeIter ancestor = parent(node);
   while (!ancestor->IsSplitNode()) {
     ancestor = parent(ancestor);
   }
+
   return ancestor;
 }
 
@@ -33,6 +23,7 @@ AlignedTree AlignedTree::GetFragment(const NodeIter& node) const {
   AlignedTree fragment;
   fragment.set_head(*node);
   ConstructFragment(node, fragment, fragment.begin());
+
   return fragment;
 }
 
@@ -55,6 +46,7 @@ vector<NodeIter> AlignedTree::GetSplitDescendants(const NodeIter& node) const {
       it.skip_children();
     }
   }
+
   return descendants;
 }
 

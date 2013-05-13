@@ -11,21 +11,22 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 
-Instance ReadInstance(ifstream& tree_infile,
-                      ifstream& string_infile,
+Instance ReadInstance(ifstream& tree_stream,
+                      ifstream& string_stream,
                       Dictionary& dictionary) {
-  AlignedTree tree = ReadParseTree(tree_infile, dictionary);
-  String sentence = ReadString(string_infile, dictionary);
+  AlignedTree tree = ReadParseTree(tree_stream, dictionary);
+  String sentence = ReadString(string_stream, dictionary);
   tree.begin()->SetSplitNode(true);
   tree.begin()->SetSpan(make_pair(0, sentence.size()));
   return Instance(tree, sentence);
 }
 
-AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
+AlignedTree ReadParseTree(ifstream& tree_stream, Dictionary& dictionary) {
   AlignedTree tree;
   string line;
-  getline(tree_infile, line);
+  getline(tree_stream, line);
 
+  int word_index = 0;
   // TODO(pauldb): Replace with std::regex and std::sregex_token_iterator when
   // g++ will support both.
   boost::regex r("[()]|[^\\s()][^\\s]*[^\\s()]|[^\\s()]+");
@@ -55,6 +56,8 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
     } else {
       // Otherwise, we are reading a leaf node (terminal).
       st.top()->SetWord(dictionary.GetIndex(*it));
+      st.top()->SetWordIndex(word_index);
+      ++word_index;
     }
   }
 
@@ -63,14 +66,17 @@ AlignedTree ReadParseTree(ifstream& tree_infile, Dictionary& dictionary) {
   return tree;
 }
 
-String ReadString(ifstream& string_infile, Dictionary& dictionary) {
+String ReadString(ifstream& string_stream, Dictionary& dictionary) {
   String sentence;
   string line;
-  getline(string_infile, line);
+  getline(string_stream, line);
   istringstream iss(line);
   string word;
+
+  int word_index = 0;
   while (iss >> word) {
-    sentence.push_back(StringNode(dictionary.GetIndex(word), -1));
+    sentence.push_back(StringNode(dictionary.GetIndex(word), word_index, -1));
+    ++word_index;
   }
 
   return sentence;

@@ -21,6 +21,10 @@ class AlignedNode {
 
   void SetWord(int value);
 
+  int GetWordIndex();
+
+  void SetWordIndex(int value);
+
   bool IsSplitNode();
 
   void SetSplitNode(bool value);
@@ -34,18 +38,20 @@ class AlignedNode {
   bool operator!=(const AlignedNode& node) const;
 
  private:
-  int tag, word;
+  int tag, word, word_index;
   int start, end;
   bool split_node;
 };
 
 class StringNode {
  public:
-  StringNode(int word, int var_index);
+  StringNode(int word, int word_index, int var_index);
 
   bool IsSetWord() const;
 
   int GetWord() const;
+
+  int GetWordIndex() const;
 
   int GetVarIndex() const;
 
@@ -54,7 +60,7 @@ class StringNode {
   bool operator==(const StringNode& node) const;
 
  private:
-  int word, var_index;
+  int word, word_index, var_index;
 };
 
 #endif

@@ -51,10 +51,11 @@ void Sampler::Sample(int iterations) {
   InitializeRuleCounts();
 
   for (int iter = 0; iter < iterations; ++iter) {
-    random_shuffle(training->begin(), training->end());
     cerr << "Iteration: " << iter << endl;
+    random_shuffle(training->begin(), training->end());
 
     for (auto& instance: *training) {
+      CacheSentence(instance);
       SampleAlignments(instance);
       SampleSwaps(instance);
     }
@@ -66,6 +67,26 @@ void Sampler::InitializeRuleCounts() {
   for (auto instance: *training) {
     IncrementRuleCount(instance);
   }
+}
+
+void Sampler::CacheSentence(const Instance& instance) {
+  if (forward_table == nullptr || backward_table == nullptr) {
+    return;
+  }
+
+  vector<int> source_words;
+  const AlignedTree& tree = instance.first;
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    source_words.push_back(leaf->GetWord());
+  }
+
+  vector<int> target_words;
+  for (auto node: instance.second) {
+    target_words.push_back(node.GetWord());
+  }
+
+  forward_table->CacheSentence(source_words, target_words);
+  backward_table->CacheSentence(target_words, source_words);
 }
 
 void Sampler::SampleAlignments(const Instance& instance) {
@@ -243,7 +264,7 @@ String Sampler::ConstructRuleTargetSide(const AlignedTree& fragment,
     if (frontier[i] == -1) {
       result.push_back(target_string[i]);
     } else if (result.empty() || result.back().GetVarIndex() != frontier[i]) {
-      result.push_back(StringNode(-1, frontier[i]));
+      result.push_back(StringNode(-1, -1, frontier[i]));
     }
   }
 
@@ -350,25 +371,25 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
     prob_str = prob_stop_str;
     prob_str += (prob_tt + prob_cont_str) * (target_string.size() - vars);
   } else {
-    vector<int> source_words;
+    vector<int> source_indexes;
     for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-      if (leaf->IsSetWord()) {
-        source_words.push_back(leaf->GetWord());
+      if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
+        source_indexes.push_back(leaf->GetWordIndex());
       }
     }
 
-    vector<int> target_words;
-    for (auto string_node: target_string) {
-      if (string_node.IsSetWord()) {
-        target_words.push_back(string_node.GetWord());
+    vector<int> target_indexes;
+    for (auto node: target_string) {
+      if (node.IsSetWord()) {
+        target_indexes.push_back(node.GetWordIndex());
       }
     }
 
     // Use geometric mean on bidirectional IBM Model 1 probabilities.
     double prob_forward = forward_table->ComputeLogProbability(
-        source_words, target_words);
+        source_indexes, target_indexes);
     double prob_backward = backward_table->ComputeLogProbability(
-        source_words, target_words);
+        target_indexes, source_indexes);
     prob_str = 0.5 * (prob_forward + prob_backward);
   }
 

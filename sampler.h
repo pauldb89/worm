@@ -35,6 +35,8 @@ class Sampler {
  private:
   void InitializeRuleCounts();
 
+  void CacheSentence(const Instance& instance);
+
   void SampleAlignments(const Instance& instance);
 
   void SampleSwaps(const Instance& instance);

@@ -15,14 +15,20 @@ typedef boost::hash<pair<int, int>> PairHash;
 
 class TranslationTable {
  public:
-  TranslationTable(ifstream& fin, Dictionary& dictionary);
+  TranslationTable(ifstream& fin, Dictionary& source_vocabulary,
+                   Dictionary& target_vocabulary, Dictionary& dictionary);
 
-  double ComputeLogProbability(const vector<int>& source_words,
-                               const vector<int>& target_words);
+  void CacheSentence(const vector<int>& source_words,
+                     const vector<int>& target_words);
+
+  double ComputeLogProbability(const vector<int>& source_indexes,
+                               const vector<int>& target_indexes);
+
+  static const double DEFAULT_NULL_PROB;
 
  private:
   unordered_map<pair<int, int>, double, PairHash> table;
-  int null_word;
+  vector<vector<double>> cache;
 };
 
 #endif
