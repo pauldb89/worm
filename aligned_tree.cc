@@ -66,6 +66,9 @@ void AlignedTree::DisplayTree(Dictionary& dictionary) const {
       current_depth = depth(it);
     }
     cerr << dictionary.GetToken(it->GetTag()) << " ";
+    if (it->IsSetWord() && (!it->IsSplitNode() || it == begin())) {
+      cerr << dictionary.GetToken(it->GetWord()) << " ";
+    }
   }
   cerr << endl;
 }

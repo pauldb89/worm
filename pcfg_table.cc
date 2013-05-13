@@ -23,7 +23,7 @@ PCFGTable::PCFGTable(const shared_ptr<vector<Instance>>& training) {
   }
 
   // Normalize counts to compute log probabilities.
-  for (auto lhs_entry: rule_probs) {
+  for (auto &lhs_entry: rule_probs) {
     double total = 0;
     for (auto rhs_prob_pair: lhs_entry.second) {
       total += rhs_prob_pair.second;
