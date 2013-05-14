@@ -21,6 +21,8 @@ class AlignedNode {
 
   void SetWord(int value);
 
+  void UnsetWord();
+
   int GetWordIndex();
 
   void SetWordIndex(int value);

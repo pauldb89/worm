@@ -34,6 +34,8 @@ void AlignedTree::ConstructFragment(const NodeIter& node,
     auto new_node = fragment.append_child(fragment_node, *sibling);
     if (!sibling->IsSplitNode()) {
       ConstructFragment(sibling, fragment, new_node);
+    } else {
+      new_node->UnsetWord();
     }
   }
 }

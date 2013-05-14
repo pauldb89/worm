@@ -27,6 +27,10 @@ void AlignedNode::SetWord(int value) {
   word = value;
 }
 
+void AlignedNode::UnsetWord() {
+  word = word_index = -1;
+}
+
 int AlignedNode::GetWordIndex() {
   return word_index;
 }
