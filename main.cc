@@ -18,9 +18,14 @@ using namespace std;
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
-  po::options_description desc("Command line options");
-  desc.add_options()
+  po::options_description cmdline_specific("Command line options");
+  cmdline_specific.add_options()
       ("help,h", "Show available options")
+      ("config,c", po::value<string>()->default_value("data/worm/worm.ini"),
+          "Path to config file");
+
+  po::options_description general_options("General options");
+  general_options.add_options()
       ("trees,t", po::value<string>()->required(),
           "File continaing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
@@ -50,12 +55,19 @@ int main(int argc, char **argv) {
           "source_word_id target_word_id probability.");
 
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::options_description cmdline_options;
+  cmdline_options.add(cmdline_specific).add(general_options);
+  po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
 
   if (vm.count("help")) {
-    cout << desc << endl;
+    cout << cmdline_options << endl;
     return 0;
   }
+
+  po::options_description config_options;
+  config_options.add(general_options);
+  ifstream config_stream(vm["config"].as<string>());
+  po::store(po::parse_config_file(config_stream, config_options), vm);
 
   po::notify(vm);
 
