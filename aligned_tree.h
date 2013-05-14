@@ -5,16 +5,13 @@
 
 #include "node.h"
 #include "tree.h"
-#include "util.h"
 
 using namespace std;
 
+class Dictionary;
+
 class AlignedTree: public tree<AlignedNode> {
  public:
-  friend Instance ReadInstance(ifstream& tree_infile,
-                               ifstream& string_infile,
-                               Dictionary& dictionary);
-
   int GetRootTag() const;
 
   iterator GetSplitAncestor(const iterator& node) const;

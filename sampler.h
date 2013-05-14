@@ -12,7 +12,6 @@
 
 using namespace std;
 
-typedef pair<AlignedTree, String> Rule;
 typedef Restaurant<Rule> RuleCounts;
 typedef AlignedTree::iterator NodeIter;
 
@@ -30,7 +29,9 @@ class Sampler {
 
   void Sample(int iterations);
 
-  void SerializeGrammar(ofstream& gout);
+  void SerializeGrammar(ofstream& out);
+
+  void SerializeTraining(ofstream& out);
 
  private:
   void InitializeRuleCounts();

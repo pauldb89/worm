@@ -436,34 +436,44 @@ void Sampler::DecrementRuleCount(const Rule& rule) {
   counts[tag].decrement(rule);
 }
 
-void Sampler::SerializeGrammar(ofstream& gout) {
+void Sampler::SerializeGrammar(ofstream& out) {
+  unordered_map<int, map<Rule, double>> rule_probs;
+  for (auto instance: *training) {
+    CacheSentence(instance);
+    const AlignedTree& tree = instance.first;
+    for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        Rule rule = GetRule(instance, node);
+        int root_tag = node->GetTag();
+        if (rule_probs[root_tag].find(rule) == rule_probs[root_tag].end()) {
+          rule_probs[root_tag][rule] = ComputeLogProbability(rule);
+        }
+      }
+    }
+  }
+
+  for (auto entry: rule_probs) {
+    vector<pair<double, Rule>> rules;
+    for (auto rule_entry: entry.second) {
+      rules.push_back(make_pair(rule_entry.second, rule_entry.first));
+    }
+
+    sort(rules.begin(), rules.end(), greater<pair<double, Rule>>());
+    for (auto rule: rules) {
+      WriteSCFGRule(out, rule.second, dictionary);
+      out << exp(rule.first) << "\n";
+    }
+  }
+}
+
+void Sampler::SerializeTraining(ofstream& out) {
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);
-        const AlignedTree& frag = rule.first;
-        const String& target_string = rule.second;
-
-        gout << dictionary.GetToken(frag.GetRootTag()) << " ||| ";
-
-        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-          if (leaf == frag.begin() || !leaf->IsSplitNode()) {
-            gout << dictionary.GetToken(leaf->GetWord()) << " ";
-          } else {
-            gout << dictionary.GetToken(leaf->GetTag()) << " ";
-          }
-        }
-        gout << "||| ";
-
-        for (auto entry: target_string) {
-          if (entry.IsSetWord()) {
-            gout << dictionary.GetToken(entry.GetWord()) << " ";
-          } else {
-            gout << "#" << entry.GetVarIndex() << " ";
-          }
-        }
-        gout << "\n";
+        WriteSCFGRule(out, rule, dictionary);
+        out << "\n";
       }
     }
   }

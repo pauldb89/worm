@@ -12,6 +12,7 @@ class StringNode;
 
 typedef vector<StringNode> String;
 typedef pair<AlignedTree, String> Instance;
+typedef pair<AlignedTree, String> Rule;
 
 // Reads a training instance from input files.
 Instance ReadInstance(ifstream& tree_stream,
@@ -23,5 +24,7 @@ AlignedTree ReadParseTree(ifstream& tree_stream, Dictionary& dictionary);
 
 // Reads a target sentence from file.
 String ReadString(ifstream& string_stream, Dictionary& dictionary);
+
+void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary);
 
 #endif

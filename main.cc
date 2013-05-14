@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
           "File continaing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
           "File continaing target strings")
-      ("output,o", po::value<string>()->required(),
-          "File for writing the grammar")
+      ("output,o", po::value<string>()->required(), "Output file")
+      ("grammar", "Output the grammar instead of the treebank derivations")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100),
@@ -106,8 +106,12 @@ int main(int argc, char **argv) {
                   vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
 
-  ofstream grammar_stream(vm["output"].as<string>());
-  sampler.SerializeGrammar(grammar_stream);
+  ofstream output_stream(vm["output"].as<string>());
+  if (vm.count("grammar")) {
+    sampler.SerializeGrammar(output_stream);
+  } else {
+    sampler.SerializeTraining(output_stream);
+  }
 
   return 0;
 }

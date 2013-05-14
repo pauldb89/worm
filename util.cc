@@ -81,3 +81,26 @@ String ReadString(ifstream& string_stream, Dictionary& dictionary) {
 
   return sentence;
 }
+
+void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
+  const AlignedTree& tree = rule.first;
+  out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
+
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    if (leaf->IsSetWord() && (leaf == tree.begin() || !leaf->IsSplitNode())) {
+      out << dictionary.GetToken(leaf->GetWord()) << " ";
+    } else {
+      out << dictionary.GetToken(leaf->GetTag()) << " ";
+    }
+  }
+  out << "||| ";
+
+  for (auto node: rule.second) {
+    if (node.IsSetWord()) {
+      out << dictionary.GetToken(node.GetWord()) << " ";
+    } else {
+      out << "#" << node.GetVarIndex() << " ";
+    }
+  }
+  out << "||| ";
+}
