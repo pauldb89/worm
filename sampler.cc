@@ -1,8 +1,14 @@
 #include "sampler.h"
 
+#include <chrono>
+
 #include "node.h"
 #include "pcfg_table.h"
 #include "translation_table.h"
+
+using namespace chrono;
+
+typedef high_resolution_clock Clock;
 
 Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  Dictionary& dictionary,
@@ -51,6 +57,8 @@ void Sampler::Sample(int iterations) {
   InitializeRuleCounts();
 
   for (int iter = 0; iter < iterations; ++iter) {
+    Clock::time_point start_time = Clock::now();
+
     cerr << "Iteration: " << iter << endl;
     random_shuffle(training->begin(), training->end());
 
@@ -59,6 +67,10 @@ void Sampler::Sample(int iterations) {
       SampleAlignments(instance);
       SampleSwaps(instance);
     }
+
+    Clock::time_point stop_time = Clock::now();
+    auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
+    cerr << "Time elapsed: " << duration / 1000.0 << " seconds" << endl;
   }
 }
 
