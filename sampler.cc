@@ -59,9 +59,7 @@ void Sampler::Sample(int iterations) {
   for (int iter = 0; iter < iterations; ++iter) {
     Clock::time_point start_time = Clock::now();
 
-    cerr << "Iteration: " << iter << endl;
     random_shuffle(training->begin(), training->end());
-
     for (auto& instance: *training) {
       CacheSentence(instance);
       SampleAlignments(instance);
@@ -70,14 +68,19 @@ void Sampler::Sample(int iterations) {
 
     Clock::time_point stop_time = Clock::now();
     auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
-    cerr << "Time elapsed: " << duration / 1000.0 << " seconds" << endl;
+    cerr << "Iteration " << iter << " completed in "
+         << duration / 1000.0 << " seconds" << endl;
   }
 }
 
 void Sampler::InitializeRuleCounts() {
-  // Initially, the grammar consists of all the training instances.
   for (auto instance: *training) {
-    IncrementRuleCount(instance);
+    const AlignedTree& tree = instance.first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        IncrementRuleCount(GetRule(instance, node));
+      }
+    }
   }
 }
 
@@ -118,6 +121,7 @@ void Sampler::SampleAlignments(const Instance& instance) {
     vector<double> probs;
     // Compute probability for not splitting the node (single rule).
     node->SetSplitNode(false);
+    node->SetSpan(make_pair(-1, -1));
     probs.push_back(ComputeLogProbability(GetRule(instance, ancestor)));
 
     // Find possible alignment spans and compute the probability for each one.
@@ -153,16 +157,20 @@ void Sampler::SampleAlignments(const Instance& instance) {
       value = Log<double>::subtract(value, probs[0]);
     }
 
+    bool sampled = false;
     for (size_t i = 1; i < probs.size(); ++i) {
       if (value <= probs[i]) {
         node->SetSpan(legal_spans[i - 1]);
         IncrementRuleCount(GetRule(instance, ancestor));
         IncrementRuleCount(GetRule(instance, node));
+        sampled = true;
         break;
       }
 
       value = Log<double>::subtract(value, probs[i]);
     }
+
+    assert(sampled);
   }
 }
 

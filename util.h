@@ -17,13 +17,18 @@ typedef pair<AlignedTree, String> Rule;
 // Reads a training instance from input files.
 Instance ReadInstance(ifstream& tree_stream,
                       ifstream& string_stream,
+                      ifstream& alignment_stream,
                       Dictionary& dictionary);
 
 // Reads a parse tree from a file in ptb format.
 AlignedTree ReadParseTree(ifstream& tree_stream, Dictionary& dictionary);
 
 // Reads a target sentence from file.
-String ReadString(ifstream& string_stream, Dictionary& dictionary);
+String ReadTargetString(ifstream& string_stream, Dictionary& dictionary);
+
+void ConstructGHKMDerivation(AlignedTree& tree,
+                             const String& target_string,
+                             ifstream& alignment_stream);
 
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary);
 

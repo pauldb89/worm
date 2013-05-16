@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
           "File continaing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
           "File continaing target strings")
+      ("alignment,a", po::value<string>()->required(),
+          "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output file")
       ("grammar", "Output the grammar instead of the treebank derivations")
       ("alpha", po::value<double>()->default_value(1.0),
@@ -76,13 +78,16 @@ int main(int argc, char **argv) {
   shared_ptr<vector<Instance>> training = make_shared<vector<Instance>>();
   ifstream tree_stream(vm["trees"].as<string>());
   ifstream string_stream(vm["strings"].as<string>());
+  ifstream alignment_stream(vm["alignment"].as<string>());
   while (true) {
     tree_stream >> ws;
     string_stream >> ws;
-    if (tree_stream.eof() || string_stream.eof()) {
+    alignment_stream >> ws;
+    if (tree_stream.eof() || string_stream.eof() || alignment_stream.eof()) {
       break;
     }
-    training->push_back(ReadInstance(tree_stream, string_stream, dictionary));
+    training->push_back(ReadInstance(tree_stream, string_stream,
+                                     alignment_stream, dictionary));
   }
 
   shared_ptr<PCFGTable> pcfg_table;
