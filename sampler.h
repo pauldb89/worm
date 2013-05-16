@@ -38,6 +38,8 @@ class Sampler {
 
   void CacheSentence(const Instance& instance);
 
+  double ComputeDataLikelihood();
+
   void SampleAlignments(const Instance& instance);
 
   void SampleSwaps(const Instance& instance);
@@ -75,6 +77,7 @@ class Sampler {
   RandomGenerator& generator;
   uniform_real_distribution<double> uniform_distribution;
 
+  double alpha;
   double prob_expand, prob_not_expand;
   double prob_stop_child, prob_cont_child;
   double prob_stop_str, prob_cont_str;

@@ -144,9 +144,6 @@ void ConstructGHKMDerivation(AlignedTree& tree,
       node->SetSpan(target_span);
     }
   }
-
-  tree.begin()->SetSplitNode(true);
-  tree.begin()->SetSpan(make_pair(0, target_size));
 }
 
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {

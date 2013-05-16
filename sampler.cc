@@ -24,6 +24,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     backward_table(backward_table),
     generator(generator),
     uniform_distribution(0, 1),
+    alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
     prob_stop_child(log(pchild)),
@@ -56,6 +57,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
 void Sampler::Sample(int iterations) {
   InitializeRuleCounts();
 
+  cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   for (int iter = 0; iter < iterations; ++iter) {
     Clock::time_point start_time = Clock::now();
 
@@ -68,8 +70,9 @@ void Sampler::Sample(int iterations) {
 
     Clock::time_point stop_time = Clock::now();
     auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
-    cerr << "Iteration " << iter << " completed in "
+    cout << "Iteration " << iter << " completed in "
          << duration / 1000.0 << " seconds" << endl;
+    cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   }
 }
 
@@ -102,6 +105,30 @@ void Sampler::CacheSentence(const Instance& instance) {
 
   forward_table->CacheSentence(source_words, target_words);
   backward_table->CacheSentence(target_words, source_words);
+}
+
+double Sampler::ComputeDataLikelihood() {
+  unordered_map<int, RuleCounts> new_counts;
+  for (auto entry: counts) {
+    new_counts[entry.first] = RuleCounts(alpha, false);
+  }
+
+  double likelihood = 0;
+  for (auto instance: *training) {
+    CacheSentence(instance);
+    const AlignedTree& tree = instance.first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        const Rule& rule = GetRule(instance, node);
+        int root_tag = node->GetTag();
+        double prob = ComputeLogBaseProbability(rule);
+        likelihood += new_counts[root_tag].log_prob(rule, prob);
+        new_counts[root_tag].increment(rule);
+      }
+    }
+  }
+
+  return likelihood;
 }
 
 void Sampler::SampleAlignments(const Instance& instance) {

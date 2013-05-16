@@ -51,10 +51,10 @@ int main(int argc, char **argv) {
       ("ibm1-target-vcb", po::value<string>(), "Giza++ target vocabulary file")
       ("ibm1-forward", po::value<string>(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
-          "target_word_id source_word_id probability.")
+          "source_word_id target_word_id probability.")
       ("ibm1-backward", po::value<string>(),
           "Path to the IBM Model 1 translation table p(s|t). Expected format: "
-          "source_word_id target_word_id probability.");
+          "target_word_id source_word_id probability.");
 
   po::variables_map vm;
   po::options_description cmdline_options;
