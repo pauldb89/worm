@@ -86,8 +86,14 @@ int main(int argc, char **argv) {
     if (tree_stream.eof() || string_stream.eof() || alignment_stream.eof()) {
       break;
     }
-    training->push_back(ReadInstance(tree_stream, string_stream,
-                                     alignment_stream, dictionary));
+
+    auto instance = ReadInstance(tree_stream, string_stream, alignment_stream,
+                                 dictionary);
+    // Ignore training instances with sentences that are impossible to parse.
+    if (instance.first.size() == 1) {
+      continue;
+    }
+    training->push_back(instance);
   }
 
   shared_ptr<PCFGTable> pcfg_table;

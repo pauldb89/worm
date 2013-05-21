@@ -90,9 +90,14 @@ void ConstructGHKMDerivation(AlignedTree& tree,
                              ifstream& alignment_stream) {
   string line;
   getline(alignment_stream, line);
+
+  // Ignore alignments for sentences that are impossible to parse.
+  if (tree.size() == 1) {
+    return;
+  }
+
   boost::regex r("[0-9]+");
   boost::sregex_token_iterator it(line.begin(), line.end(), r), end;
-
   int source_size = tree.size(), target_size = target_string.size();
   vector<pair<int, int>> forward(source_size, make_pair(target_size, 0));
   vector<pair<int, int>> backward(target_size, make_pair(source_size, 0));
