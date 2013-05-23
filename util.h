@@ -28,7 +28,8 @@ String ReadTargetString(ifstream& string_stream, Dictionary& dictionary);
 
 void ConstructGHKMDerivation(AlignedTree& tree,
                              const String& target_string,
-                             ifstream& alignment_stream);
+                             ifstream& alignment_stream,
+                             Dictionary& dictionary);
 
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary);
 
