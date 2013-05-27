@@ -19,7 +19,7 @@ Instance ReadInstance(ifstream& tree_stream,
                       Dictionary& dictionary) {
   AlignedTree tree = ReadParseTree(tree_stream, dictionary);
   String target_string = ReadTargetString(string_stream, dictionary);
-  ConstructGHKMDerivation(tree, target_string, alignment_stream);
+  ConstructGHKMDerivation(tree, target_string, alignment_stream, dictionary);
   return Instance(tree, target_string);
 }
 
@@ -87,7 +87,8 @@ String ReadTargetString(ifstream& string_stream, Dictionary& dictionary) {
 
 void ConstructGHKMDerivation(AlignedTree& tree,
                              const String& target_string,
-                             ifstream& alignment_stream) {
+                             ifstream& alignment_stream,
+                             Dictionary& dictionary) {
   string line;
   getline(alignment_stream, line);
 
@@ -149,6 +150,9 @@ void ConstructGHKMDerivation(AlignedTree& tree,
       node->SetSpan(target_span);
     }
   }
+
+  tree.begin()->SetSplitNode(true);
+  tree.begin()->SetSpan(make_pair(0, target_size));
 }
 
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
