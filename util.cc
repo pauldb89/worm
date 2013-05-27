@@ -198,3 +198,10 @@ ofstream& operator<<(ofstream& out, const Alignment& alignment) {
   }
   return out;
 }
+
+ofstream& operator<<(ofstream& out, const Alignment& alignment) {
+  for (auto link: alignment) {
+    out << link.first << "-" << link.second << " ";
+  }
+  return out;
+}
