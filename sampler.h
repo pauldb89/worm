@@ -23,13 +23,13 @@ class Sampler {
   Sampler(const shared_ptr<vector<Instance>>& training, Dictionary& dictionary,
           const shared_ptr<PCFGTable>& pcfg_table,
           const shared_ptr<TranslationTable>& forward_table,
-          const shared_ptr<TranslationTable>& backward_table,
+          const shared_ptr<TranslationTable>& reverse_table,
           RandomGenerator& generator, double alpha, double pexpand,
           double pchild, double pterm);
 
   void Sample(int iterations);
 
-  void SerializeGrammar(ofstream& out);
+  void SerializeGrammar(const string& output_prefix);
 
  private:
   void InitializeRuleCounts();
@@ -65,13 +65,15 @@ class Sampler {
 
   void DecrementRuleCount(const Rule& rule);
 
+  pair<Alignment, Alignment> ConstructAlignments(const Rule& rule);
+
   shared_ptr<vector<Instance>> training;
   unordered_map<int, RuleCounts> counts;
 
   Dictionary& dictionary;
   shared_ptr<PCFGTable> pcfg_table;
   shared_ptr<TranslationTable> forward_table;
-  shared_ptr<TranslationTable> backward_table;
+  shared_ptr<TranslationTable> reverse_table;
   RandomGenerator& generator;
   uniform_real_distribution<double> uniform_distribution;
 

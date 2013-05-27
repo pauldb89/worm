@@ -177,3 +177,10 @@ void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
   }
   out << "||| ";
 }
+
+ofstream& operator<<(ofstream& out, const Alignment& alignment) {
+  for (auto link: alignment) {
+    out << link.first << "-" << link.second << " ";
+  }
+  return out;
+}

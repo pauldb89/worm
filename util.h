@@ -10,6 +10,7 @@ class AlignedTree;
 class Dictionary;
 class StringNode;
 
+typedef vector<pair<int, int>> Alignment;
 typedef vector<StringNode> String;
 typedef pair<AlignedTree, String> Instance;
 typedef pair<AlignedTree, String> Rule;
@@ -32,5 +33,7 @@ void ConstructGHKMDerivation(AlignedTree& tree,
                              Dictionary& dictionary);
 
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary);
+
+ofstream& operator<<(ofstream& out, const Alignment& alignment);
 
 #endif

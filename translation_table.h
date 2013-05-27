@@ -21,8 +21,10 @@ class TranslationTable {
   void CacheSentence(const vector<int>& source_words,
                      const vector<int>& target_words);
 
-  double ComputeLogProbability(const vector<int>& source_indexes,
-                               const vector<int>& target_indexes);
+  double ComputeAverageLogProbability(const vector<int>& source_indexes,
+                                      const vector<int>& target_indexes);
+
+  double GetLogProbability(int source_word, int target_word);
 
   static const double DEFAULT_NULL_PROB;
 

@@ -14,14 +14,14 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  Dictionary& dictionary,
                  const shared_ptr<PCFGTable>& pcfg_table,
                  const shared_ptr<TranslationTable>& forward_table,
-                 const shared_ptr<TranslationTable>& backward_table,
+                 const shared_ptr<TranslationTable>& reverse_table,
                  RandomGenerator& generator,
                  double alpha, double pexpand, double pchild, double pterm) :
     training(training),
     dictionary(dictionary),
     pcfg_table(pcfg_table),
     forward_table(forward_table),
-    backward_table(backward_table),
+    reverse_table(reverse_table),
     generator(generator),
     uniform_distribution(0, 1),
     alpha(alpha),
@@ -88,7 +88,7 @@ void Sampler::InitializeRuleCounts() {
 }
 
 void Sampler::CacheSentence(const Instance& instance) {
-  if (forward_table == nullptr || backward_table == nullptr) {
+  if (forward_table == nullptr || reverse_table == nullptr) {
     return;
   }
 
@@ -104,7 +104,7 @@ void Sampler::CacheSentence(const Instance& instance) {
   }
 
   forward_table->CacheSentence(source_words, target_words);
-  backward_table->CacheSentence(target_words, source_words);
+  reverse_table->CacheSentence(target_words, source_words);
 }
 
 double Sampler::ComputeDataLikelihood() {
@@ -414,7 +414,7 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 
   double prob_str = 0.0;
   const String& target_string = rule.second;
-  if (forward_table == nullptr || backward_table == nullptr) {
+  if (forward_table == nullptr || reverse_table == nullptr) {
     prob_str = prob_stop_str;
     prob_str += (prob_tt + prob_cont_str) * (target_string.size() - vars);
   } else {
@@ -433,11 +433,11 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
     }
 
     // Use geometric mean on bidirectional IBM Model 1 probabilities.
-    double prob_forward = forward_table->ComputeLogProbability(
+    double prob_forward = forward_table->ComputeAverageLogProbability(
         source_indexes, target_indexes);
-    double prob_backward = backward_table->ComputeLogProbability(
+    double prob_reverse = reverse_table->ComputeAverageLogProbability(
         target_indexes, source_indexes);
-    prob_str = 0.5 * (prob_forward + prob_backward);
+    prob_str = 0.5 * (prob_forward + prob_reverse);
   }
 
   for (int i = 1; i <= vars; ++i) {
@@ -483,7 +483,88 @@ void Sampler::DecrementRuleCount(const Rule& rule) {
   counts[tag].decrement(rule);
 }
 
-void Sampler::SerializeGrammar(ofstream& out) {
+pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
+  const AlignedTree& frag = rule.first;
+  const String& target_string = rule.second;
+
+  Alignment forward_alignment, reverse_alignment;
+  // Align nonterminals.
+  int leaf_index = 0, var_index = 0;
+  for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+    if (leaf->IsSplitNode() && leaf != frag.begin()) {
+      for (size_t i = 0; i < target_string.size(); ++i) {
+        if (target_string[i].GetVarIndex() == var_index) {
+          forward_alignment.push_back(make_pair(leaf_index, i));
+          reverse_alignment.push_back(make_pair(leaf_index, i));
+          break;
+        }
+      }
+      ++var_index;
+    }
+    ++leaf_index;
+  }
+
+  // Align target terminals.
+  for (size_t i = 0; i < target_string.size(); ++i) {
+    if (!target_string[i].IsSetWord()) {
+      continue;
+    }
+
+    leaf_index = 0;
+    int target_word = target_string[i].GetWord();
+    double best_match = forward_table->GetLogProbability(
+        dictionary.NULL_WORD_ID, target_word);
+    int best_index = -1;
+    for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+      if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
+        double match_prob = forward_table->GetLogProbability(
+            leaf->GetWord(), target_word);
+        if (match_prob > best_match) {
+          best_match = match_prob;
+          best_index = leaf_index;
+        }
+      }
+
+      ++leaf_index;
+    }
+
+    if (best_index >= 0) {
+      forward_alignment.push_back(make_pair(best_index, i));
+    }
+  }
+
+  // Align source terminals.
+  leaf_index = 0;
+  for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+    if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
+      int source_word = leaf->GetWord();
+      double best_match = reverse_table->GetLogProbability(
+          dictionary.NULL_WORD_ID, source_word);
+      int best_index = -1;
+      for (size_t i = 0; i < target_string.size(); ++i) {
+        if (!target_string[i].IsSetWord()) {
+          continue;
+        }
+
+        double match_prob = reverse_table->GetLogProbability(
+            target_string[i].GetWord(), source_word);
+        if (match_prob > best_match) {
+          best_match = match_prob;
+          best_index = i;
+        }
+      }
+
+      if (best_index >= 0) {
+        reverse_alignment.push_back(make_pair(leaf_index, best_index));
+      }
+    }
+    ++leaf_index;
+  }
+
+  return make_pair(forward_alignment, reverse_alignment);
+}
+
+void Sampler::SerializeGrammar(const string& output_prefix) {
   unordered_map<int, map<Rule, double>> rule_probs;
   for (auto instance: *training) {
     CacheSentence(instance);
@@ -499,6 +580,9 @@ void Sampler::SerializeGrammar(ofstream& out) {
     }
   }
 
+  ofstream gout(output_prefix + ".grammar");
+  ofstream fwd_out(output_prefix + ".fwd_align");
+  ofstream rev_out(output_prefix + ".rev_align");
   for (auto entry: rule_probs) {
     vector<pair<double, Rule>> rules;
     for (auto rule_entry: entry.second) {
@@ -507,8 +591,12 @@ void Sampler::SerializeGrammar(ofstream& out) {
 
     sort(rules.begin(), rules.end(), greater<pair<double, Rule>>());
     for (auto rule: rules) {
-      WriteSCFGRule(out, rule.second, dictionary);
-      out << exp(rule.first) << "\n";
+      WriteSCFGRule(gout, rule.second, dictionary);
+      gout << exp(rule.first) << "\n";
+
+      auto alignments = ConstructAlignments(rule.second);
+      fwd_out << alignments.first << "\n";
+      rev_out << alignments.second << "\n";
     }
   }
 }

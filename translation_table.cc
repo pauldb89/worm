@@ -1,6 +1,7 @@
 #include "translation_table.h"
 
 #include "dictionary.h"
+#include "log_add.h"
 
 const double TranslationTable::DEFAULT_NULL_PROB = 1e-50;
 
@@ -33,7 +34,7 @@ void TranslationTable::CacheSentence(const vector<int>& source_words,
   }
 }
 
-double TranslationTable::ComputeLogProbability(
+double TranslationTable::ComputeAverageLogProbability(
     const vector<int>& source_indexes, const vector<int>& target_indexes) {
   double result = 0;
   for (auto target_index: target_indexes) {
@@ -45,4 +46,17 @@ double TranslationTable::ComputeLogProbability(
   }
 
   return result;
+}
+
+double TranslationTable::GetLogProbability(int source_word, int target_word) {
+  auto result = table.find(make_pair(source_word, target_word));
+  if (result != table.end()) {
+    return result->second;
+  }
+
+  if (source_word == Dictionary::NULL_WORD_ID) {
+    return DEFAULT_NULL_PROB;
+  }
+
+  return Log<double>::zero();
 }

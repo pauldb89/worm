@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
       ("ibm1-forward", po::value<string>(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
           "source_word_id target_word_id probability.")
-      ("ibm1-backward", po::value<string>(),
+      ("ibm1-reverse", po::value<string>(),
           "Path to the IBM Model 1 translation table p(s|t). Expected format: "
           "target_word_id source_word_id probability.");
 
@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
     pcfg_table = make_shared<PCFGTable>(training);
   }
 
-  shared_ptr<TranslationTable> forward_table, backward_table;
-  if (vm.count("ibm1-forward") && vm.count("ibm1-backward") &&
+  shared_ptr<TranslationTable> forward_table, reverse_table;
+  if (vm.count("ibm1-forward") && vm.count("ibm1-reverse") &&
       vm.count("ibm1-source-vcb") && vm.count("ibm1-target-vcb")) {
     ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
     Dictionary source_vocabulary(source_vcb_stream);
@@ -111,9 +111,9 @@ int main(int argc, char **argv) {
     ifstream forward_stream(vm["ibm1-forward"].as<string>());
     forward_table = make_shared<TranslationTable>(
         forward_stream, source_vocabulary, target_vocabulary, dictionary);
-    ifstream backward_stream(vm["ibm1-backward"].as<string>());
-    backward_table = make_shared<TranslationTable>(
-        backward_stream, target_vocabulary, source_vocabulary, dictionary);
+    ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
+    reverse_table = make_shared<TranslationTable>(
+        reverse_stream, target_vocabulary, source_vocabulary, dictionary);
   }
 
   // Induce tree to string grammar via Gibbs sampling.
@@ -123,13 +123,12 @@ int main(int argc, char **argv) {
   }
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
-                  backward_table, generator, vm["alpha"].as<double>(),
+                  reverse_table, generator, vm["alpha"].as<double>(),
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
                   vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
 
-  ofstream output_stream(vm["output"].as<string>());
-  sampler.SerializeGrammar(output_stream);
+  sampler.SerializeGrammar(vm["output"].as<string>());
 
   return 0;
 }
