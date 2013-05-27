@@ -67,6 +67,26 @@ void AlignedTree::DisplayTree(Dictionary& dictionary) const {
   cerr << endl;
 }
 
+void AlignedTree::Write(ofstream& out, const iterator& root,
+                        Dictionary& dictionary, int& var_index) const {
+  out << "(" << dictionary.GetToken(root->GetTag()) << " ";
+
+  if (root.number_of_children() == 0) {
+    if (root->IsSetWord()) {
+      out << dictionary.GetToken(root->GetWord());
+    } else {
+      out << "#" << var_index++;
+    }
+  } else {
+    for (auto child = begin(root); child != end(root); ++child) {
+      Write(out, child, dictionary, var_index);
+      out << " ";
+    }
+  }
+
+  out << ")";
+}
+
 bool AlignedTree::operator<(const AlignedTree& tree) const {
   if (size() != tree.size()) {
     return size() < tree.size();

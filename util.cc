@@ -155,6 +155,18 @@ void ConstructGHKMDerivation(AlignedTree& tree,
   tree.begin()->SetSpan(make_pair(0, target_size));
 }
 
+void WriteTargetString(ofstream& out,
+                       const String& target_string,
+                       Dictionary& dictionary) {
+  for (auto node: target_string) {
+    if (node.IsSetWord()) {
+      out << dictionary.GetToken(node.GetWord()) << " ";
+    } else {
+      out << "#" << node.GetVarIndex() << " ";
+    }
+  }
+}
+
 void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
   const AlignedTree& tree = rule.first;
   out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
@@ -168,12 +180,21 @@ void WriteSCFGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
   }
   out << "||| ";
 
-  for (auto node: rule.second) {
-    if (node.IsSetWord()) {
-      out << dictionary.GetToken(node.GetWord()) << " ";
-    } else {
-      out << "#" << node.GetVarIndex() << " ";
-    }
+  WriteTargetString(out, rule.second, dictionary);
+}
+
+void WriteSTSGRule(ofstream& out, const Rule& rule, Dictionary& dictionary) {
+  const AlignedTree& tree = rule.first;
+  out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
+  int var_index = 0;
+  tree.Write(out, tree.begin(), dictionary, var_index);
+  out << " ||| ";
+  WriteTargetString(out, rule.second, dictionary);
+}
+
+ofstream& operator<<(ofstream& out, const Alignment& alignment) {
+  for (auto link: alignment) {
+    out << link.first << "-" << link.second << " ";
   }
-  out << "||| ";
+  return out;
 }
