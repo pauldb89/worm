@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <boost/program_options.hpp>
-#include <boost/version.hpp>
 
 #include "aligned_tree.h"
 #include "dictionary.h"
@@ -21,7 +20,7 @@ int main(int argc, char **argv) {
   po::options_description cmdline_specific("Command line options");
   cmdline_specific.add_options()
       ("help,h", "Show available options")
-      ("config,c", po::value<string>()->default_value("data/worm/worm.ini"),
+      ("config,c", po::value<string>()->default_value("data/worm/sampler.ini"),
           "Path to config file");
 
   po::options_description general_options("General options");
@@ -79,21 +78,18 @@ int main(int argc, char **argv) {
   ifstream tree_stream(vm["trees"].as<string>());
   ifstream string_stream(vm["strings"].as<string>());
   ifstream alignment_stream(vm["alignment"].as<string>());
-  while (true) {
-    tree_stream >> ws;
-    string_stream >> ws;
-    alignment_stream >> ws;
-    if (tree_stream.eof() || string_stream.eof() || alignment_stream.eof()) {
-      break;
-    }
-
+  while (!tree_stream.eof() && !string_stream.eof() &&
+         !alignment_stream.eof()) {
     auto instance = ReadInstance(tree_stream, string_stream, alignment_stream,
                                  dictionary);
     // Ignore training instances with sentences that are impossible to parse.
-    if (instance.first.size() == 1) {
-      continue;
+    if (instance.first.size() > 1) {
+      training->push_back(instance);
     }
-    training->push_back(instance);
+
+    tree_stream >> ws;
+    string_stream >> ws;
+    alignment_stream >> ws;
   }
 
   shared_ptr<PCFGTable> pcfg_table;

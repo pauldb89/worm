@@ -26,7 +26,9 @@ class AlignedTree: public tree<AlignedNode> {
 
   void DisplayTree(Dictionary& dictionary) const;
 
-  void Write(ofstream& out, const iterator& root,
+  void Write(ostream& out, const iterator& root, Dictionary& dictionary) const;
+
+  void Write(ostream& out, const iterator& root,
              Dictionary& dictionary, int& var_index) const;
 
   bool operator<(const AlignedTree& tree) const;

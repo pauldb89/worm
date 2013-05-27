@@ -591,17 +591,12 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
 
     sort(rules.begin(), rules.end(), greater<pair<double, Rule>>());
     for (auto rule: rules) {
-<<<<<<< HEAD
       if (scfg_format) {
         WriteSCFGRule(gout, rule.second, dictionary);
       } else {
         WriteSTSGRule(gout, rule.second, dictionary);
       }
       gout << "||| " << exp(rule.first) << "\n";
-=======
-      WriteSCFGRule(gout, rule.second, dictionary);
-      gout << exp(rule.first) << "\n";
->>>>>>> 52be1180444943c6ebbaa02f1550dffe6d238b85
 
       auto alignments = ConstructAlignments(rule.second);
       fwd_out << alignments.first << "\n";

@@ -67,7 +67,13 @@ void AlignedTree::DisplayTree(Dictionary& dictionary) const {
   cerr << endl;
 }
 
-void AlignedTree::Write(ofstream& out, const iterator& root,
+void AlignedTree::Write(ostream& out, const iterator& root,
+                        Dictionary& dictionary) const {
+  int var_index = 0;
+  Write(out, root, dictionary, var_index);
+}
+
+void AlignedTree::Write(ostream& out, const iterator& root,
                         Dictionary& dictionary, int& var_index) const {
   out << "(" << dictionary.GetToken(root->GetTag()) << " ";
 
