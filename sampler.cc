@@ -512,16 +512,3 @@ void Sampler::SerializeGrammar(ofstream& out) {
     }
   }
 }
-
-void Sampler::SerializeTraining(ofstream& out) {
-  for (auto instance: *training) {
-    const AlignedTree& tree = instance.first;
-    for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
-      if (node->IsSplitNode()) {
-        Rule rule = GetRule(instance, node);
-        WriteSCFGRule(out, rule, dictionary);
-        out << "\n";
-      }
-    }
-  }
-}

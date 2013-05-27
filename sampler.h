@@ -31,8 +31,6 @@ class Sampler {
 
   void SerializeGrammar(ofstream& out);
 
-  void SerializeTraining(ofstream& out);
-
  private:
   void InitializeRuleCounts();
 

@@ -33,7 +33,6 @@ int main(int argc, char **argv) {
       ("alignment,a", po::value<string>()->required(),
           "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output file")
-      ("grammar", "Output the grammar instead of the treebank derivations")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100),
@@ -130,11 +129,7 @@ int main(int argc, char **argv) {
   sampler.Sample(vm["iterations"].as<int>());
 
   ofstream output_stream(vm["output"].as<string>());
-  if (vm.count("grammar")) {
-    sampler.SerializeGrammar(output_stream);
-  } else {
-    sampler.SerializeTraining(output_stream);
-  }
+  sampler.SerializeGrammar(output_stream);
 
   return 0;
 }
