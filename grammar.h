@@ -19,6 +19,8 @@ class Grammar {
   Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
           Dictionary& dictionary, double penalty);
 
+  vector<pair<Rule, double>> GetRules(int tag);
+
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the
   // alignment. These links may appear due to symmetrization.
@@ -33,7 +35,7 @@ class Grammar {
   const static int MAX_REORDER = 15;
 
   double penalty;
-  unordered_map<int, vector<pair<Rule, double>>> reordering_grammar;
+  unordered_map<int, vector<pair<Rule, double>>> rules;
 };
 
 #endif

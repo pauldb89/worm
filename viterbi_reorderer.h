@@ -1,15 +1,33 @@
 #ifndef _VITERBI_REORDERER_H_
 #define _VITERBI_REORDERER_H_
 
+#include <map>
+
 #include "grammar.h"
+
+using namespace std;
 
 class ViterbiReorderer {
  public:
   ViterbiReorderer(const Grammar& grammar);
 
-  String Reorder(const AlignedTree& tree);
+  // TODO(pauldb): Remove dictionary when done.
+  String Reorder(const AlignedTree& tree, Dictionary& dictionary);
 
  private:
+  double ComputeProbability(const map<NodeIter, double>& cache,
+                            const AlignedTree& tree, NodeIter tree_node,
+                            const AlignedTree& frag, NodeIter frag_node);
+
+  String ConstructReordering(const map<NodeIter, Rule>& best_rules,
+                             const AlignedTree& tree, NodeIter tree_node);
+
+  vector<NodeIter> GetFrontierVariables(
+      const AlignedTree& tree, NodeIter tree_node,
+      const AlignedTree& frag, NodeIter frag_node);
+
+  const static double FAIL;
+
   Grammar grammar;
 };
 

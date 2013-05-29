@@ -28,7 +28,7 @@ Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
   }
 
   for (auto rule: reordering_probs) {
-    reordering_grammar[rule.first.first.GetRootTag()].push_back(rule);
+    rules[rule.first.first.GetRootTag()].push_back(rule);
   }
 }
 
@@ -146,4 +146,8 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
   }
 
   return reordering;
+}
+
+vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
+  return rules[root_tag];
 }

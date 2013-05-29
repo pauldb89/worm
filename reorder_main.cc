@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
                   vm["penalty"].as<double>());
   ViterbiReorderer reorderer(grammar);
 
+  int sentence_index = 0;
   while (true) {
     cin >> ws;
     if (!cin.good()) {
@@ -46,9 +47,17 @@ int main(int argc, char** argv) {
     }
 
     AlignedTree tree = ReadParseTree(cin, dictionary);
-    String reordering = reorderer.Reorder(tree);
+    String reordering = reorderer.Reorder(tree, dictionary);
     WriteTargetString(cout, reordering, dictionary);
     cout << "\n";
+
+    if (reordering.size() == 0) {
+      cerr << "Failed to reorder sentence " << sentence_index << ": ";
+      tree.Write(cerr, tree.begin(), dictionary);
+      cerr << "\n";
+    }
+
+    ++sentence_index;
   }
 
   return 0;

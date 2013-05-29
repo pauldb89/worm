@@ -26,6 +26,7 @@ class AlignedTree: public tree<AlignedNode> {
 
   void DisplayTree(Dictionary& dictionary) const;
 
+  // Remove root from here. Move second write to private.
   void Write(ostream& out, const iterator& root, Dictionary& dictionary) const;
 
   void Write(ostream& out, const iterator& root,
