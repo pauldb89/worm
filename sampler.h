@@ -29,6 +29,8 @@ class Sampler {
 
   void Sample(int iterations);
 
+  void SerializeAlignments(const string& output_prefix);
+
   void SerializeGrammar(const string& output_prefix, bool scfg_format);
 
  private:
@@ -65,9 +67,14 @@ class Sampler {
 
   void DecrementRuleCount(const Rule& rule);
 
+  Alignment ConstructNonterminalLinks(const Rule& rule);
+
+  pair<Alignment, Alignment> ConstructTerminalLinks(const Rule& rule);
+
   pair<Alignment, Alignment> ConstructAlignments(const Rule& rule);
 
   shared_ptr<vector<Instance>> training;
+  vector<shared_ptr<Instance>> initial_order;
   unordered_map<int, RuleCounts> counts;
 
   Dictionary& dictionary;

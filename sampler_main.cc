@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
       ("alignment,a", po::value<string>()->required(),
           "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output prefix")
+      ("align", "Infer alignments instead of a STSG grammar")
       ("scfg", "Print grammar as SCFG instead of STSG")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")
@@ -46,12 +47,14 @@ int main(int argc, char **argv) {
       ("seed", po::value<unsigned int>()->default_value(0),
           "Seed for random generator")
       ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
-      ("ibm1-source-vcb", po::value<string>(), "Giza++ source vocabulary file")
-      ("ibm1-target-vcb", po::value<string>(), "Giza++ target vocabulary file")
-      ("ibm1-forward", po::value<string>(),
+      ("ibm1-source-vcb", po::value<string>()->required(),
+          "Giza++ source vocabulary file")
+      ("ibm1-target-vcb", po::value<string>()->required(),
+          "Giza++ target vocabulary file")
+      ("ibm1-forward", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
           "source_word_id target_word_id probability.")
-      ("ibm1-reverse", po::value<string>(),
+      ("ibm1-reverse", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(s|t). Expected format: "
           "target_word_id source_word_id probability.");
 
@@ -98,20 +101,17 @@ int main(int argc, char **argv) {
   }
 
   shared_ptr<TranslationTable> forward_table, reverse_table;
-  if (vm.count("ibm1-forward") && vm.count("ibm1-reverse") &&
-      vm.count("ibm1-source-vcb") && vm.count("ibm1-target-vcb")) {
-    ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
-    Dictionary source_vocabulary(source_vcb_stream);
-    ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
-    Dictionary target_vocabulary(target_vcb_stream);
+  ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
+  Dictionary source_vocabulary(source_vcb_stream);
+  ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
+  Dictionary target_vocabulary(target_vcb_stream);
 
-    ifstream forward_stream(vm["ibm1-forward"].as<string>());
-    forward_table = make_shared<TranslationTable>(
-        forward_stream, source_vocabulary, target_vocabulary, dictionary);
-    ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
-    reverse_table = make_shared<TranslationTable>(
-        reverse_stream, target_vocabulary, source_vocabulary, dictionary);
-  }
+  ifstream forward_stream(vm["ibm1-forward"].as<string>());
+  forward_table = make_shared<TranslationTable>(
+      forward_stream, source_vocabulary, target_vocabulary, dictionary);
+  ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
+  reverse_table = make_shared<TranslationTable>(
+      reverse_stream, target_vocabulary, source_vocabulary, dictionary);
 
   // Induce tree to string grammar via Gibbs sampling.
   unsigned int seed = vm["seed"].as<unsigned int>();
@@ -125,7 +125,12 @@ int main(int argc, char **argv) {
                   vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
 
-  sampler.SerializeGrammar(vm["output"].as<string>(), vm.count("scfg"));
+  string output_prefix = vm["output"].as<string>();
+  if (vm.count("align")) {
+    sampler.SerializeAlignments(output_prefix);
+  } else {
+    sampler.SerializeGrammar(output_prefix, vm.count("scfg"));
+  }
 
   return 0;
 }

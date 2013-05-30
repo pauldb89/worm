@@ -31,6 +31,10 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     prob_cont_child(log(1 - pchild)),
     prob_stop_str(log(pterm)),
     prob_cont_str(log(1 - pterm)) {
+  for (auto instance: *training) {
+    initial_order.push_back(make_shared<Instance>(instance));
+  }
+
   set<int> non_terminals, source_terminals, target_terminals;
   for (auto instance: *training) {
     for (auto node: instance.first) {
@@ -483,19 +487,17 @@ void Sampler::DecrementRuleCount(const Rule& rule) {
   counts[tag].decrement(rule);
 }
 
-pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
+Alignment Sampler::ConstructNonterminalLinks(const Rule& rule) {
   const AlignedTree& frag = rule.first;
   const String& target_string = rule.second;
 
-  Alignment forward_alignment, reverse_alignment;
-  // Align nonterminals.
+  Alignment alignment;
   int leaf_index = 0, var_index = 0;
   for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
     if (leaf->IsSplitNode() && leaf != frag.begin()) {
       for (size_t i = 0; i < target_string.size(); ++i) {
         if (target_string[i].GetVarIndex() == var_index) {
-          forward_alignment.push_back(make_pair(leaf_index, i));
-          reverse_alignment.push_back(make_pair(leaf_index, i));
+          alignment.push_back(make_pair(leaf_index, i));
           break;
         }
       }
@@ -504,14 +506,20 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
     ++leaf_index;
   }
 
-  // Align target terminals.
+  return alignment;
+}
+
+pair<Alignment, Alignment> Sampler::ConstructTerminalLinks(const Rule& rule) {
+  const AlignedTree& frag = rule.first;
+  const String& target_string = rule.second;
+
+  Alignment forward_alignment;
   for (size_t i = 0; i < target_string.size(); ++i) {
     if (!target_string[i].IsSetWord()) {
       continue;
     }
 
-    leaf_index = 0;
-    int target_word = target_string[i].GetWord();
+    int target_word = target_string[i].GetWord(), leaf_index = 0;
     double best_match = forward_table->GetLogProbability(
         dictionary.NULL_WORD_ID, target_word);
     int best_index = -1;
@@ -533,8 +541,8 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
     }
   }
 
-  // Align source terminals.
-  leaf_index = 0;
+  Alignment reverse_alignment;
+  int leaf_index = 0;
   for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
     if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
       int source_word = leaf->GetWord();
@@ -564,6 +572,64 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
   return make_pair(forward_alignment, reverse_alignment);
 }
 
+pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
+  Alignment forward_alignment, reverse_alignment;
+
+  auto nonterminal_links = ConstructNonterminalLinks(rule);
+  copy(nonterminal_links.begin(), nonterminal_links.end(),
+       back_inserter(forward_alignment));
+  copy(nonterminal_links.begin(), nonterminal_links.end(),
+       back_inserter(reverse_alignment));
+
+  auto terminal_links = ConstructTerminalLinks(rule);
+  copy(terminal_links.first.begin(), terminal_links.first.end(),
+       back_inserter(forward_alignment));
+  copy(terminal_links.second.begin(), terminal_links.second.end(),
+       back_inserter(reverse_alignment));
+
+  return make_pair(forward_alignment, reverse_alignment);
+}
+
+void Sampler::SerializeAlignments(const string& output_prefix) {
+  ofstream fwd_out(output_prefix + ".fwd_align");
+  ofstream rev_out(output_prefix + ".rev_align");
+
+  for (auto instance: initial_order) {
+    const AlignedTree& tree = instance->first;
+
+    Alignment forward_alignment, reverse_alignment;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        const Rule& rule = GetRule(*instance, node);
+        const AlignedTree& frag = rule.first;
+        const String& target_string = rule.second;
+
+        auto subalignments = ConstructTerminalLinks(rule);
+
+        vector<NodeIter> leaves;
+        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+          leaves.push_back(leaf);
+        }
+
+        for (auto link: subalignments.first) {
+          int source_index = leaves[link.first]->GetWordIndex();
+          int target_index = target_string[link.second].GetWordIndex();
+          forward_alignment.push_back(make_pair(source_index, target_index));
+        }
+
+        for (auto link: subalignments.second) {
+          int source_index = leaves[link.first]->GetWordIndex();
+          int target_index = target_string[link.second].GetWordIndex();
+          reverse_alignment.push_back(make_pair(source_index, target_index));
+        }
+      }
+    }
+
+    fwd_out << forward_alignment << "\n";
+    rev_out << reverse_alignment << "\n";
+  }
+}
+
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   unordered_map<int, map<Rule, double>> rule_probs;
   for (auto instance: *training) {
@@ -581,8 +647,8 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   }
 
   ofstream gout(output_prefix + ".grammar");
-  ofstream fwd_out(output_prefix + ".fwd_align");
-  ofstream rev_out(output_prefix + ".rev_align");
+  ofstream fwd_out(output_prefix + ".fwd");
+  ofstream rev_out(output_prefix + ".rev");
   for (auto entry: rule_probs) {
     vector<pair<double, Rule>> rules;
     for (auto rule_entry: entry.second) {
