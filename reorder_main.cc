@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 
     if (reordering.size() == 0) {
       cerr << "Failed to reorder sentence " << sentence_index << ": ";
-      tree.Write(cerr, tree.begin(), dictionary);
+      tree.Write(cerr, dictionary);
       cerr << "\n";
     }
 

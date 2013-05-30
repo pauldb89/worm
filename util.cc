@@ -229,7 +229,7 @@ void WriteSCFGRule(ostream& out, const Rule& rule, Dictionary& dictionary) {
 void WriteSTSGRule(ostream& out, const Rule& rule, Dictionary& dictionary) {
   const AlignedTree& tree = rule.first;
   out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
-  tree.Write(out, tree.begin(), dictionary);
+  tree.Write(out, dictionary);
   out << " ||| ";
   WriteTargetString(out, rule.second, dictionary);
 }

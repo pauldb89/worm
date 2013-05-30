@@ -18,23 +18,23 @@ class AlignedTree: public tree<AlignedNode> {
 
   AlignedTree GetFragment(const iterator& node) const;
 
-  void ConstructFragment(const iterator& node,
-                         AlignedTree& fragment,
-                         const iterator& current_node) const;
-
   vector<iterator> GetSplitDescendants(const iterator& root) const;
 
   void DisplayTree(Dictionary& dictionary) const;
 
-  // Remove root from here. Move second write to private.
-  void Write(ostream& out, const iterator& root, Dictionary& dictionary) const;
-
-  void Write(ostream& out, const iterator& root,
-             Dictionary& dictionary, int& var_index) const;
+  void Write(ostream& out, Dictionary& dictionary) const;
 
   bool operator<(const AlignedTree& tree) const;
 
   bool operator==(const AlignedTree& tree) const;
+
+ private:
+  void ConstructFragment(const iterator& node,
+                         AlignedTree& fragment,
+                         const iterator& current_node) const;
+
+  void Write(ostream& out, const iterator& root,
+             Dictionary& dictionary, int& var_index) const;
 };
 
 bool operator<(const AlignedTree::iterator& it1,

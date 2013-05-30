@@ -67,10 +67,9 @@ void AlignedTree::DisplayTree(Dictionary& dictionary) const {
   cerr << endl;
 }
 
-void AlignedTree::Write(ostream& out, const iterator& root,
-                        Dictionary& dictionary) const {
+void AlignedTree::Write(ostream& out, Dictionary& dictionary) const {
   int var_index = 0;
-  Write(out, root, dictionary, var_index);
+  Write(out, begin(), dictionary, var_index);
 }
 
 void AlignedTree::Write(ostream& out, const iterator& root,
