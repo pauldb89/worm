@@ -67,6 +67,11 @@ void Sampler::Sample(int iterations) {
 
     random_shuffle(training->begin(), training->end());
     for (auto& instance: *training) {
+
+      // Ignore parse failures.
+      if (instance.first.size() <= 1) {
+        continue;
+      }
       CacheSentence(instance);
       SampleAlignments(instance);
       SampleSwaps(instance);
@@ -597,6 +602,12 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
   for (auto instance: initial_order) {
     const AlignedTree& tree = instance->first;
 
+    if (tree.size() <= 1) {
+      fwd_out << "\n";
+      rev_out << "\n";
+      continue;
+    }
+
     Alignment forward_alignment, reverse_alignment;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
@@ -633,8 +644,14 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   unordered_map<int, map<Rule, double>> rule_probs;
   for (auto instance: *training) {
-    CacheSentence(instance);
     const AlignedTree& tree = instance.first;
+
+    // Ignore parse failures.
+    if (tree.size() <= 1) {
+      continue;
+    }
+
+    CacheSentence(instance);
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);

@@ -138,8 +138,8 @@ void ConstructGHKMDerivation(AlignedTree& tree,
   Alignment alignment;
   alignment_stream >> alignment;
 
-  // Ignore alignments for sentences that are impossible to parse.
-  if (tree.size() == 1) {
+  // Ignore parse failures.
+  if (tree.size() <= 1) {
     return;
   }
 

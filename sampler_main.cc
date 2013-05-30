@@ -83,13 +83,8 @@ int main(int argc, char **argv) {
   ifstream alignment_stream(vm["alignment"].as<string>());
   while (!tree_stream.eof() && !string_stream.eof() &&
          !alignment_stream.eof()) {
-    auto instance = ReadInstance(tree_stream, string_stream, alignment_stream,
-                                 dictionary);
-    // Ignore training instances with sentences that are impossible to parse.
-    if (instance.first.size() > 1) {
-      training->push_back(instance);
-    }
-
+    training->push_back(ReadInstance(tree_stream, string_stream,
+                                     alignment_stream, dictionary));
     tree_stream >> ws;
     string_stream >> ws;
     alignment_stream >> ws;
