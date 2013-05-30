@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
   po::notify(vm);
 
-  // Read training data.
+  cerr << "Reading training data..." << endl;
   Dictionary dictionary;
   shared_ptr<vector<Instance>> training = make_shared<vector<Instance>>();
   ifstream tree_stream(vm["trees"].as<string>());
@@ -94,26 +94,33 @@ int main(int argc, char **argv) {
     string_stream >> ws;
     alignment_stream >> ws;
   }
+  cerr << "Done..." << endl;
 
   shared_ptr<PCFGTable> pcfg_table;
   if (vm.count("pcfg")) {
+    cerr << "Constructing PCFG table" << endl;
     pcfg_table = make_shared<PCFGTable>(training);
+    cerr << "Done..." << endl;
   }
 
+  cerr << "Reading monolingual dictionaries..." << endl;
   shared_ptr<TranslationTable> forward_table, reverse_table;
   ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
   Dictionary source_vocabulary(source_vcb_stream);
   ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
   Dictionary target_vocabulary(target_vcb_stream);
+  cerr << "Done..." << endl;
 
+  cerr << "Reading translation tables..." << endl;
   ifstream forward_stream(vm["ibm1-forward"].as<string>());
   forward_table = make_shared<TranslationTable>(
       forward_stream, source_vocabulary, target_vocabulary, dictionary);
   ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
   reverse_table = make_shared<TranslationTable>(
       reverse_stream, target_vocabulary, source_vocabulary, dictionary);
+  cerr << "Done..." << endl;
 
-  // Induce tree to string grammar via Gibbs sampling.
+  cerr << "Sampling..." << endl;
   unsigned int seed = vm["seed"].as<unsigned int>();
   if (seed == 0) {
     seed = time(NULL);
@@ -124,13 +131,16 @@ int main(int argc, char **argv) {
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
                   vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
+  cerr << "Done..." << endl;
 
+  cerr << "Writing output files..." << endl;
   string output_prefix = vm["output"].as<string>();
   if (vm.count("align")) {
     sampler.SerializeAlignments(output_prefix);
   } else {
     sampler.SerializeGrammar(output_prefix, vm.count("scfg"));
   }
+  cerr << "Done..." << endl;
 
   return 0;
 }
