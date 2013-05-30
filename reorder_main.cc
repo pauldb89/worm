@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
   // reordering models).
   Grammar grammar(grammar_stream, alignment_stream, dictionary,
                   vm["penalty"].as<double>());
+  cerr << "Done constructing the reordering grammar" << endl;
+
   ViterbiReorderer reorderer(grammar);
 
   int sentence_index = 0;
@@ -58,6 +60,9 @@ int main(int argc, char** argv) {
     }
 
     ++sentence_index;
+    if (sentence_index % 10 == 0) {
+      cerr << "Reordered " << sentence_index << " sentences..." << endl;
+    }
   }
 
   return 0;
