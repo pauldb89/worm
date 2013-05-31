@@ -24,8 +24,8 @@ class Sampler {
           const shared_ptr<PCFGTable>& pcfg_table,
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& reverse_table,
-          RandomGenerator& generator, double alpha, double pexpand,
-          double pchild, double pterm);
+          RandomGenerator& generator, bool enable_all_stats, double alpha,
+          double pexpand, double pchild, double pterm);
 
   void Sample(int iterations);
 
@@ -38,7 +38,13 @@ class Sampler {
 
   void CacheSentence(const Instance& instance);
 
+  void DisplayStats();
+
   double ComputeDataLikelihood();
+
+  double ComputeAverageNumInteriorNodes();
+
+  int ComputeGrammarSize();
 
   void SampleAlignments(const Instance& instance);
 
@@ -84,6 +90,7 @@ class Sampler {
   RandomGenerator& generator;
   uniform_real_distribution<double> uniform_distribution;
 
+  bool enable_all_stats;
   double alpha;
   double prob_expand, prob_not_expand;
   double prob_stop_child, prob_cont_child;

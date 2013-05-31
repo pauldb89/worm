@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
           "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output prefix")
       ("align", "Infer alignments instead of a STSG grammar")
+      ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
       ("alpha", po::value<double>()->default_value(1.0),
           "Dirichlet process concentration parameter")
@@ -122,9 +123,9 @@ int main(int argc, char **argv) {
   }
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
-                  reverse_table, generator, vm["alpha"].as<double>(),
-                  vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
-                  vm["pterm"].as<double>());
+                  reverse_table, generator, vm.count("stats"),
+                  vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
+                  vm["pchild"].as<double>(), vm["pterm"].as<double>());
   sampler.Sample(vm["iterations"].as<int>());
   cerr << "Done..." << endl;
 

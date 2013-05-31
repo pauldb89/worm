@@ -15,7 +15,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<PCFGTable>& pcfg_table,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
-                 RandomGenerator& generator,
+                 RandomGenerator& generator, bool enable_all_stats,
                  double alpha, double pexpand, double pchild, double pterm) :
     training(training),
     dictionary(dictionary),
@@ -24,6 +24,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     reverse_table(reverse_table),
     generator(generator),
     uniform_distribution(0, 1),
+    enable_all_stats(enable_all_stats),
     alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -61,9 +62,9 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
 void Sampler::Sample(int iterations) {
   InitializeRuleCounts();
 
-  cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   for (int iter = 0; iter < iterations; ++iter) {
     Clock::time_point start_time = Clock::now();
+    DisplayStats();
 
     random_shuffle(training->begin(), training->end());
     for (auto& instance: *training) {
@@ -81,8 +82,8 @@ void Sampler::Sample(int iterations) {
     auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
     cout << "Iteration " << iter << " completed in "
          << duration / 1000.0 << " seconds" << endl;
-    cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   }
+  DisplayStats();
 }
 
 void Sampler::InitializeRuleCounts() {
@@ -116,6 +117,15 @@ void Sampler::CacheSentence(const Instance& instance) {
   reverse_table->CacheSentence(target_words, source_words);
 }
 
+void Sampler::DisplayStats() {
+  cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
+  if (enable_all_stats) {
+    cout << "\tAverage number of interior nodes: "
+         << ComputeAverageNumInteriorNodes() << endl;
+    cout << "\tGrammar size: " << ComputeGrammarSize() << endl;
+  }
+}
+
 double Sampler::ComputeDataLikelihood() {
   unordered_map<int, RuleCounts> new_counts;
   for (auto entry: counts) {
@@ -138,6 +148,35 @@ double Sampler::ComputeDataLikelihood() {
   }
 
   return likelihood;
+}
+
+double Sampler::ComputeAverageNumInteriorNodes() {
+  double interior_nodes = 0, total_rules = 0;
+  for (auto instance: *training) {
+    const AlignedTree& tree = instance.first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      if (!node->IsSplitNode()) {
+        ++interior_nodes;
+      } else {
+        ++total_rules;
+      }
+    }
+  }
+
+  return interior_nodes / total_rules;
+}
+
+int Sampler::ComputeGrammarSize() {
+  set<Rule> grammar;
+  for (auto instance: *training) {
+    const AlignedTree& tree = instance.first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      if (node->IsSplitNode()) {
+        grammar.insert(GetRule(instance, node));
+      }
+    }
+  }
+  return grammar.size();
 }
 
 void Sampler::SampleAlignments(const Instance& instance) {
