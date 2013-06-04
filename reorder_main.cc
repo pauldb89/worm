@@ -1,3 +1,4 @@
+#include <chrono>
 #include <fstream>
 #include <iostream>
 
@@ -7,7 +8,10 @@
 #include "viterbi_reorderer.h"
 
 using namespace std;
+using namespace chrono;
 namespace po = boost::program_options;
+
+typedef high_resolution_clock Clock;
 
 int main(int argc, char** argv) {
   po::options_description desc("Command line options");
@@ -30,6 +34,7 @@ int main(int argc, char** argv) {
 
   po::notify(vm);
 
+  cerr << "Constructing reordering grammar..." << endl;
   Dictionary dictionary;
   ifstream grammar_stream(vm["grammar"].as<string>());
   ifstream alignment_stream(vm["alignment"].as<string>());
@@ -37,11 +42,12 @@ int main(int argc, char** argv) {
   // reordering models).
   Grammar grammar(grammar_stream, alignment_stream, dictionary,
                   vm["penalty"].as<double>());
-  cerr << "Done constructing the reordering grammar" << endl;
+  cerr << "Done..." << endl;
 
   ViterbiReorderer reorderer(grammar);
 
   int sentence_index = 0;
+  Clock::time_point start_time = Clock::now();
   while (true) {
     cin >> ws;
     if (!cin.good()) {
@@ -50,18 +56,29 @@ int main(int argc, char** argv) {
 
     AlignedTree tree = ReadParseTree(cin, dictionary);
     String reordering = reorderer.Reorder(tree, dictionary);
-    WriteTargetString(cout, reordering, dictionary);
-    cout << "\n";
-
     if (reordering.size() == 0) {
       cerr << "Failed to reorder sentence " << sentence_index << ": ";
       tree.Write(cerr, dictionary);
       cerr << "\n";
+
+      int word_index = 0;
+      String source_string;
+      for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+        source_string.push_back(StringNode(leaf->GetWord(), word_index++, -1));
+      }
+      WriteTargetString(cout, source_string, dictionary);
+      cout << "\n";
+    } else {
+      WriteTargetString(cout, reordering, dictionary);
+      cout << "\n";
     }
 
     ++sentence_index;
     if (sentence_index % 10 == 0) {
-      cerr << "Reordered " << sentence_index << " sentences..." << endl;
+      Clock::time_point stop_time = Clock::now();
+      auto diff = duration_cast<milliseconds>(stop_time - start_time).count();
+      cerr << "Reordered " << sentence_index << " sentences in "
+           << diff / 1000.0 << " seconds..." << endl;
     }
   }
 
