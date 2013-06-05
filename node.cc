@@ -80,6 +80,10 @@ int StringNode::GetWordIndex() const {
   return word_index;
 }
 
+void StringNode::SetWordIndex(int value) {
+  word_index = value;
+}
+
 int StringNode::GetVarIndex() const {
   return var_index;
 }

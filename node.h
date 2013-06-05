@@ -55,6 +55,8 @@ class StringNode {
 
   int GetWordIndex() const;
 
+  void SetWordIndex(int value);
+
   int GetVarIndex() const;
 
   bool operator<(const StringNode& node) const;

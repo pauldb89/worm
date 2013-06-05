@@ -14,6 +14,8 @@ class ViterbiReorderer {
   // TODO(pauldb): Remove dictionary when done.
   String Reorder(const AlignedTree& tree, Dictionary& dictionary);
 
+  double GetSkippedNodesRatio();
+
  private:
   double ComputeProbability(const map<NodeIter, double>& cache,
                             const AlignedTree& tree, NodeIter tree_node,
@@ -27,8 +29,11 @@ class ViterbiReorderer {
       const AlignedTree& frag, NodeIter frag_node);
 
   const static double FAIL;
+  const static double STOP;
 
   Grammar grammar;
+  // TODO(pauldb): Remove when no longer necessary.
+  int total_nodes, skipped_nodes;
 };
 
 #endif

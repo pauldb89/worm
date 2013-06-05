@@ -55,23 +55,13 @@ int main(int argc, char** argv) {
     }
 
     AlignedTree tree = ReadParseTree(cin, dictionary);
-    String reordering = reorderer.Reorder(tree, dictionary);
-    if (reordering.size() == 0) {
-      cerr << "Failed to reorder sentence " << sentence_index << ": ";
-      tree.Write(cerr, dictionary);
-      cerr << "\n";
-
-      int word_index = 0;
-      String source_string;
-      for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
-        source_string.push_back(StringNode(leaf->GetWord(), word_index++, -1));
-      }
-      WriteTargetString(cout, source_string, dictionary);
-      cout << "\n";
-    } else {
+    // Ignore unparsable sentences.
+    if (tree.size() > 1) {
+      String reordering = reorderer.Reorder(tree, dictionary);
       WriteTargetString(cout, reordering, dictionary);
-      cout << "\n";
     }
+
+    cout << "\n";
 
     ++sentence_index;
     if (sentence_index % 10 == 0) {
@@ -80,6 +70,9 @@ int main(int argc, char** argv) {
       cerr << "Reordered " << sentence_index << " sentences in "
            << diff / 1000.0 << " seconds..." << endl;
     }
+
+    cerr << "Skipped nodes ratio: "
+         << reorderer.GetSkippedNodesRatio() << endl;
   }
 
   return 0;

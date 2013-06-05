@@ -6,17 +6,20 @@
 #include "dictionary.h"
 
 const double ViterbiReorderer::FAIL = -numeric_limits<double>::infinity();
+const double ViterbiReorderer::STOP = -1e6;
 
 ViterbiReorderer::ViterbiReorderer(const Grammar& grammar) :
     grammar(grammar) {}
 
 String ViterbiReorderer::Reorder(const AlignedTree& tree, Dictionary& dictionary) {
+  total_nodes += tree.size();
+
   map<NodeIter, double> cache;
   map<NodeIter, Rule> best_rules;
   for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
     vector<pair<Rule, double>> rules = grammar.GetRules(node->GetTag());
 
-    cache[node] = FAIL;
+    cache[node] = STOP * tree.size(node);
     for (auto entry: rules) {
       const Rule& rule = entry.first;
       const AlignedTree& frag = rule.first;
@@ -29,11 +32,11 @@ String ViterbiReorderer::Reorder(const AlignedTree& tree, Dictionary& dictionary
     }
   }
 
-  if (cache[tree.begin()] == FAIL) {
-    return String();
+  String result = ConstructReordering(best_rules, tree, tree.begin());
+  for (size_t i = 0; i < result.size(); ++i) {
+    result[i].SetWordIndex(i);
   }
-
-  return ConstructReordering(best_rules, tree, tree.begin());
+  return result;
 }
 
 double ViterbiReorderer::ComputeProbability(
@@ -69,12 +72,22 @@ double ViterbiReorderer::ComputeProbability(
 String ViterbiReorderer::ConstructReordering(
     const map<NodeIter, Rule>& best_rules, const AlignedTree& tree,
     NodeIter tree_node) {
+  String result;
+  // If the subtree was impossible to parse, just use the initial reordering.
+  if (best_rules.count(tree_node) == 0) {
+    const AlignedTree& frag = tree.GetFragment(tree_node);
+    skipped_nodes += frag.size();
+    for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+      result.push_back(StringNode(leaf->GetWord(), -1, -1));
+    }
+    return result;
+  }
+
   const Rule& rule = best_rules.at(tree_node);
   const AlignedTree& frag = rule.first;
   vector<NodeIter> frontier_variables = GetFrontierVariables(
       tree, tree_node, frag, frag.begin());
 
-  String result;
   const String& reordering = rule.second;
   for (auto node: reordering) {
     if (node.IsSetWord()) {
@@ -109,4 +122,8 @@ vector<NodeIter> ViterbiReorderer::GetFrontierVariables(
     ++tree_child; ++frag_child;
   }
   return frontier_variables;
+}
+
+double ViterbiReorderer::GetSkippedNodesRatio() {
+  return (double) skipped_nodes / total_nodes;
 }
