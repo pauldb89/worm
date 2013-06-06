@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-// TODO(pauldb): Remove dictionary when done.
 #include "dictionary.h"
+#include "grammar.h"
 
 const double ViterbiReorderer::FAIL = -numeric_limits<double>::infinity();
 const double ViterbiReorderer::STOP = -1e6;
 
-ViterbiReorderer::ViterbiReorderer(const Grammar& grammar,
+ViterbiReorderer::ViterbiReorderer(shared_ptr<Grammar> grammar,
                                    Dictionary& dictionary) :
     grammar(grammar), dictionary(dictionary), total_nodes(0), skipped_nodes(0) {}
 
@@ -18,7 +18,7 @@ String ViterbiReorderer::Reorder(const AlignedTree& tree) {
   map<NodeIter, double> cache;
   map<NodeIter, Rule> best_rules;
   for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
-    vector<pair<Rule, double>> rules = grammar.GetRules(node->GetTag());
+    vector<pair<Rule, double>> rules = grammar->GetRules(node->GetTag());
 
     cache[node] = STOP * tree.size(node);
     for (auto entry: rules) {

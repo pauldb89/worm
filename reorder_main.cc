@@ -4,7 +4,9 @@
 
 #include <boost/program_options.hpp>
 
+#include "aligned_tree.h"
 #include "dictionary.h"
+#include "grammar.h"
 #include "viterbi_reorderer.h"
 
 using namespace std;
@@ -21,6 +23,8 @@ int main(int argc, char** argv) {
       ("grammar,g", po::value<string>()->required(), "Path to grammar file")
       ("alignment,a", po::value<string>()->required(),
           "Path to file containing rule alignments")
+      ("threads", po::value<int>()->default_value(1)->required(),
+          "Number of threads for reordering")
       ("penalty", po::value<double>()->default_value(0.1),
           "Displacement penalty for reordering");
 
@@ -38,42 +42,52 @@ int main(int argc, char** argv) {
   Dictionary dictionary;
   ifstream grammar_stream(vm["grammar"].as<string>());
   ifstream alignment_stream(vm["alignment"].as<string>());
-  // TODO(pauldb): Avoid storing the grammar twice (here and in one of the
-  // reordering models).
-  Grammar grammar(grammar_stream, alignment_stream, dictionary,
-                  vm["penalty"].as<double>());
+  shared_ptr<Grammar> grammar = make_shared<Grammar>(
+      grammar_stream, alignment_stream, dictionary, vm["penalty"].as<double>());
   cerr << "Done..." << endl;
 
-  ViterbiReorderer reorderer(grammar, dictionary);
+  vector<AlignedTree> input_trees;
+  while (cin.good()) {
+    input_trees.push_back(ReadParseTree(cin, dictionary));
+    cin >> ws;
+  }
 
   int sentence_index = 0;
   Clock::time_point start_time = Clock::now();
-  while (true) {
-    cin >> ws;
-    if (!cin.good()) {
-      break;
-    }
+  vector<String> reorderings(input_trees.size());
+  int num_threads = vm["threads"].as<int>();
+  cerr << "Reordering will use " << num_threads << " threads." << endl;
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < input_trees.size(); ++i) {
+    ViterbiReorderer reorderer(grammar, dictionary);
 
-    AlignedTree tree = ReadParseTree(cin, dictionary);
     // Ignore unparsable sentences.
-    if (tree.size() > 1) {
-      String reordering = reorderer.Reorder(tree);
-      WriteTargetString(cout, reordering, dictionary);
+    if (input_trees.size() <= 1) {
+      reorderings[i] = String();
+    } else {
+      reorderings[i] = reorderer.Reorder(input_trees[i]);
     }
 
-    cout << "\n";
-
-    ++sentence_index;
-    if (sentence_index % 10 == 0) {
-      Clock::time_point stop_time = Clock::now();
-      auto diff = duration_cast<milliseconds>(stop_time - start_time).count();
-      cerr << "Reordered " << sentence_index << " sentences in "
-           << diff / 1000.0 << " seconds..." << endl;
+    #pragma omp critical
+    {
+      ++sentence_index;
+      cerr << ".";
+      if (sentence_index % 100 == 0) {
+        cerr << " [" << sentence_index << "]" << endl;
+      }
     }
-
-    cerr << "Skipped nodes ratio: "
-         << reorderer.GetSkippedNodesRatio() << endl;
   }
+  Clock::time_point stop_time = Clock::now();
+  auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
+  cerr << endl << "Reordering " << reorderings.size() << " sentences took "
+       << duration / 1000.0 << " seconds..." << endl;
+
+  cerr << "Writing reordered sentences..." << endl;
+  for (String reordering: reorderings) {
+    WriteTargetString(cout, reordering, dictionary);
+    cout << "\n";
+  }
+  cerr << "Done..." << endl;
 
   return 0;
 }

@@ -2,16 +2,23 @@
 #define _VITERBI_REORDERER_H_
 
 #include <map>
+#include <memory>
+#include <vector>
 
-#include "grammar.h"
+#include "aligned_tree.h"
+#include "util.h"
 
 using namespace std;
 
+class Dictionary;
+class Grammar;
+
+typedef AlignedTree::iterator NodeIter;
+
 class ViterbiReorderer {
  public:
-  ViterbiReorderer(const Grammar& grammar, Dictionary& dictionary);
+  ViterbiReorderer(shared_ptr<Grammar> grammar, Dictionary& dictionary);
 
-  // TODO(pauldb): Remove dictionary when done.
   String Reorder(const AlignedTree& tree);
 
   double GetSkippedNodesRatio();
@@ -31,9 +38,8 @@ class ViterbiReorderer {
   const static double FAIL;
   const static double STOP;
 
-  Grammar grammar;
+  shared_ptr<Grammar> grammar;
   Dictionary& dictionary;
-  // TODO(pauldb): Remove when no longer necessary.
   int total_nodes, skipped_nodes;
 };
 
