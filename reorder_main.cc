@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
                   vm["penalty"].as<double>());
   cerr << "Done..." << endl;
 
-  ViterbiReorderer reorderer(grammar);
+  ViterbiReorderer reorderer(grammar, dictionary);
 
   int sentence_index = 0;
   Clock::time_point start_time = Clock::now();
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     AlignedTree tree = ReadParseTree(cin, dictionary);
     // Ignore unparsable sentences.
     if (tree.size() > 1) {
-      String reordering = reorderer.Reorder(tree, dictionary);
+      String reordering = reorderer.Reorder(tree);
       WriteTargetString(cout, reordering, dictionary);
     }
 

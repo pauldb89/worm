@@ -8,10 +8,11 @@
 const double ViterbiReorderer::FAIL = -numeric_limits<double>::infinity();
 const double ViterbiReorderer::STOP = -1e6;
 
-ViterbiReorderer::ViterbiReorderer(const Grammar& grammar) :
-    grammar(grammar) {}
+ViterbiReorderer::ViterbiReorderer(const Grammar& grammar,
+                                   Dictionary& dictionary) :
+    grammar(grammar), dictionary(dictionary), total_nodes(0), skipped_nodes(0) {}
 
-String ViterbiReorderer::Reorder(const AlignedTree& tree, Dictionary& dictionary) {
+String ViterbiReorderer::Reorder(const AlignedTree& tree) {
   total_nodes += tree.size();
 
   map<NodeIter, double> cache;
@@ -73,12 +74,20 @@ String ViterbiReorderer::ConstructReordering(
     const map<NodeIter, Rule>& best_rules, const AlignedTree& tree,
     NodeIter tree_node) {
   String result;
-  // If the subtree was impossible to parse, just use the initial reordering.
+  // If the subtree was impossible to parse, assume the children of the current
+  // node do not need to be reordered.
   if (best_rules.count(tree_node) == 0) {
-    const AlignedTree& frag = tree.GetFragment(tree_node);
-    skipped_nodes += frag.size();
-    for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-      result.push_back(StringNode(leaf->GetWord(), -1, -1));
+    skipped_nodes += tree_node.number_of_children();
+
+    if (tree_node.number_of_children() == 0) {
+      result.push_back(StringNode(tree_node->GetWord(), -1, -1));
+    } else {
+      for (auto child = tree.begin(tree_node);
+           child != tree.end(tree_node);
+           ++child) {
+        String subresult = ConstructReordering(best_rules, tree, child);
+        copy(subresult.begin(), subresult.end(), back_inserter(result));
+      }
     }
     return result;
   }

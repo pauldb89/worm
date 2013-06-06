@@ -9,10 +9,10 @@ using namespace std;
 
 class ViterbiReorderer {
  public:
-  ViterbiReorderer(const Grammar& grammar);
+  ViterbiReorderer(const Grammar& grammar, Dictionary& dictionary);
 
   // TODO(pauldb): Remove dictionary when done.
-  String Reorder(const AlignedTree& tree, Dictionary& dictionary);
+  String Reorder(const AlignedTree& tree);
 
   double GetSkippedNodesRatio();
 
@@ -32,6 +32,7 @@ class ViterbiReorderer {
   const static double STOP;
 
   Grammar grammar;
+  Dictionary& dictionary;
   // TODO(pauldb): Remove when no longer necessary.
   int total_nodes, skipped_nodes;
 };
