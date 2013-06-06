@@ -46,6 +46,8 @@ class Sampler {
 
   int ComputeGrammarSize();
 
+  unordered_map<int, int> GenerateRuleHistogram();
+
   void SampleAlignments(const Instance& instance);
 
   void SampleSwaps(const Instance& instance);

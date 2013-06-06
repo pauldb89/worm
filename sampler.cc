@@ -123,6 +123,12 @@ void Sampler::DisplayStats() {
     cout << "\tAverage number of interior nodes: "
          << ComputeAverageNumInteriorNodes() << endl;
     cout << "\tGrammar size: " << ComputeGrammarSize() << endl;
+
+    auto histogram = GenerateRuleHistogram();
+    for (auto entry: histogram) {
+      cout << "(" << entry.first << ", " << entry.second << ") ";
+    }
+    cout << endl;
   }
 }
 
@@ -177,6 +183,27 @@ int Sampler::ComputeGrammarSize() {
     }
   }
   return grammar.size();
+}
+
+unordered_map<int, int> Sampler::GenerateRuleHistogram() {
+  unordered_map<int, int> histogram;
+  for (auto instance: *training) {
+    const AlignedTree& tree = instance.first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      const AlignedTree& frag = tree.GetFragment(node);
+      int inner_nodes = frag.size() - 1;
+
+      if (frag.size() > 1) {
+        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+          --inner_nodes;
+        }
+      }
+
+      ++histogram[inner_nodes];
+    }
+  }
+
+  return histogram;
 }
 
 void Sampler::SampleAlignments(const Instance& instance) {
