@@ -1,7 +1,6 @@
 #include "translation_table.h"
 
 #include "dictionary.h"
-#include "log_add.h"
 
 const double TranslationTable::DEFAULT_NULL_PROB = 1e-50;
 
@@ -22,15 +21,10 @@ void TranslationTable::CacheSentence(const vector<int>& source_words,
   cache = vector<vector<double>>(target_words.size());
   for (size_t i = 0; i < target_words.size(); ++i) {
     cache[i].resize(source_words.size() + 1);
-
     for (size_t j = 0; j < source_words.size(); ++j) {
-      auto it = table.find(make_pair(source_words[j], target_words[i]));
-      cache[i][j] = it == table.end() ? 0 : it->second;
+      cache[i][j] = GetProbability(source_words[j], target_words[i]);
     }
-
-    auto it = table.find(make_pair(Dictionary::NULL_WORD_ID, target_words[i]));
-    cache[i][source_words.size()] = it == table.end() ?
-        DEFAULT_NULL_PROB : it->second;
+    cache[i].back() = GetProbability(Dictionary::NULL_WORD_ID, target_words[i]);
   }
 }
 
@@ -48,7 +42,7 @@ double TranslationTable::ComputeAverageLogProbability(
   return result;
 }
 
-double TranslationTable::GetLogProbability(int source_word, int target_word) {
+double TranslationTable::GetProbability(int source_word, int target_word) {
   auto result = table.find(make_pair(source_word, target_word));
   if (result != table.end()) {
     return result->second;
@@ -58,5 +52,5 @@ double TranslationTable::GetLogProbability(int source_word, int target_word) {
     return DEFAULT_NULL_PROB;
   }
 
-  return Log<double>::zero();
+  return 0;
 }

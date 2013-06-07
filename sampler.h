@@ -44,9 +44,9 @@ class Sampler {
 
   double ComputeAverageNumInteriorNodes();
 
-  int ComputeGrammarSize();
+  int GetGrammarSize();
 
-  unordered_map<int, int> GenerateRuleHistogram();
+  map<int, int> GenerateRuleHistogram();
 
   void SampleAlignments(const Instance& instance);
 

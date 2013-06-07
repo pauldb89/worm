@@ -24,7 +24,7 @@ class TranslationTable {
   double ComputeAverageLogProbability(const vector<int>& source_indexes,
                                       const vector<int>& target_indexes);
 
-  double GetLogProbability(int source_word, int target_word);
+  double GetProbability(int source_word, int target_word);
 
   static const double DEFAULT_NULL_PROB;
 

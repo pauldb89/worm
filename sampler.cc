@@ -122,7 +122,7 @@ void Sampler::DisplayStats() {
   if (enable_all_stats) {
     cout << "\tAverage number of interior nodes: "
          << ComputeAverageNumInteriorNodes() << endl;
-    cout << "\tGrammar size: " << ComputeGrammarSize() << endl;
+    cout << "\tGrammar size: " << GetGrammarSize() << endl;
 
     auto histogram = GenerateRuleHistogram();
     for (auto entry: histogram) {
@@ -172,7 +172,7 @@ double Sampler::ComputeAverageNumInteriorNodes() {
   return interior_nodes / total_rules;
 }
 
-int Sampler::ComputeGrammarSize() {
+int Sampler::GetGrammarSize() {
   set<Rule> grammar;
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
@@ -185,21 +185,23 @@ int Sampler::ComputeGrammarSize() {
   return grammar.size();
 }
 
-unordered_map<int, int> Sampler::GenerateRuleHistogram() {
-  unordered_map<int, int> histogram;
+map<int, int> Sampler::GenerateRuleHistogram() {
+  map<int, int> histogram;
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
-      const AlignedTree& frag = tree.GetFragment(node);
-      int inner_nodes = frag.size() - 1;
+      if (node->IsSplitNode()) {
+        const AlignedTree& frag = tree.GetFragment(node);
+        int inner_nodes = frag.size() - 1;
 
-      if (frag.size() > 1) {
-        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-          --inner_nodes;
+        if (frag.size() > 1) {
+          for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+            --inner_nodes;
+          }
         }
-      }
 
-      ++histogram[inner_nodes];
+        ++histogram[inner_nodes];
+      }
     }
   }
 
@@ -591,12 +593,12 @@ pair<Alignment, Alignment> Sampler::ConstructTerminalLinks(const Rule& rule) {
     }
 
     int target_word = target_string[i].GetWord(), leaf_index = 0;
-    double best_match = forward_table->GetLogProbability(
+    double best_match = forward_table->GetProbability(
         dictionary.NULL_WORD_ID, target_word);
     int best_index = -1;
     for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
       if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
-        double match_prob = forward_table->GetLogProbability(
+        double match_prob = forward_table->GetProbability(
             leaf->GetWord(), target_word);
         if (match_prob > best_match) {
           best_match = match_prob;
@@ -617,7 +619,7 @@ pair<Alignment, Alignment> Sampler::ConstructTerminalLinks(const Rule& rule) {
   for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
     if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
       int source_word = leaf->GetWord();
-      double best_match = reverse_table->GetLogProbability(
+      double best_match = reverse_table->GetProbability(
           dictionary.NULL_WORD_ID, source_word);
       int best_index = -1;
       for (size_t i = 0; i < target_string.size(); ++i) {
@@ -625,7 +627,7 @@ pair<Alignment, Alignment> Sampler::ConstructTerminalLinks(const Rule& rule) {
           continue;
         }
 
-        double match_prob = reverse_table->GetLogProbability(
+        double match_prob = reverse_table->GetProbability(
             target_string[i].GetWord(), source_word);
         if (match_prob > best_match) {
           best_match = match_prob;
