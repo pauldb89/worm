@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 
   shared_ptr<PCFGTable> pcfg_table;
   if (vm.count("pcfg")) {
-    cerr << "Constructing PCFG table" << endl;
+    cerr << "Constructing PCFG table..." << endl;
     pcfg_table = make_shared<PCFGTable>(training);
     cerr << "Done..." << endl;
   }
