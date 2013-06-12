@@ -17,7 +17,8 @@ class Dictionary;
 class Grammar {
  public:
   Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
-          Dictionary& dictionary, double penalty);
+          Dictionary& dictionary, double penalty,
+          int max_leaves, int max_tree_size);
 
   vector<pair<Rule, double>> GetRules(int tag);
 
@@ -32,9 +33,8 @@ class Grammar {
   String ConstructReordering(const vector<NodeIter>& source_items,
                              const vector<int>& permutation);
 
-  const static int MAX_REORDER = 15;
-
   double penalty;
+  int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
 };
 

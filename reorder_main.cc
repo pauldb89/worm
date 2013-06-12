@@ -25,8 +25,12 @@ int main(int argc, char** argv) {
           "Path to file containing rule alignments")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads for reordering")
-      ("penalty", po::value<double>()->default_value(0.1),
-          "Displacement penalty for reordering");
+      ("penalty", po::value<double>()->default_value(0.1)->required(),
+          "Displacement penalty for reordering")
+      ("max_leaves", po::value<int>()->default_value(5)->required(),
+          "Maximum number of leaves in rules that are reordered")
+      ("max_tree_size", po::value<int>()->default_value(8)->required(),
+          "Maximum size of a tree rule that is reordered");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -43,7 +47,8 @@ int main(int argc, char** argv) {
   ifstream grammar_stream(vm["grammar"].as<string>());
   ifstream alignment_stream(vm["alignment"].as<string>());
   shared_ptr<Grammar> grammar = make_shared<Grammar>(
-      grammar_stream, alignment_stream, dictionary, vm["penalty"].as<double>());
+      grammar_stream, alignment_stream, dictionary, vm["penalty"].as<double>(),
+      vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
   cerr << "Done..." << endl;
 
   vector<AlignedTree> input_trees;
@@ -62,7 +67,7 @@ int main(int argc, char** argv) {
     ViterbiReorderer reorderer(grammar, dictionary);
 
     // Ignore unparsable sentences.
-    if (input_trees.size() <= 1) {
+    if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
       reorderings[i] = reorderer.Reorder(input_trees[i]);

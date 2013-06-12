@@ -124,6 +124,7 @@ void Sampler::DisplayStats() {
          << ComputeAverageNumInteriorNodes() << endl;
     cout << "\tGrammar size: " << GetGrammarSize() << endl;
 
+    cout << "\tRule histogram: ";
     auto histogram = GenerateRuleHistogram();
     for (auto entry: histogram) {
       cout << "(" << entry.first << ", " << entry.second << ") ";

@@ -8,8 +8,9 @@
 #include "dictionary.h"
 
 Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
-                 Dictionary& dictionary, double penalty) :
-    penalty(penalty) {
+                 Dictionary& dictionary, double penalty,
+                 int max_leaves, int max_tree_size) :
+    penalty(penalty), max_leaves(max_leaves), max_tree_size(max_tree_size) {
   map<Rule, double> reordering_probs;
   while (!grammar_stream.eof()) {
     pair<Rule, double> entry = ReadRule(grammar_stream, dictionary);
@@ -64,9 +65,10 @@ String Grammar::FindBestReordering(const AlignedTree& tree,
   for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
     source_items.push_back(leaf);
   }
-  int source_size = source_items.size();
 
-  if (source_size >= MAX_REORDER) {
+  int source_size = source_items.size();
+  int tree_size = tree.size();
+  if (source_size > max_leaves || tree_size > max_tree_size) {
     vector<int> permutation;
     for (int i = 0; i < source_size; ++i) {
       permutation.push_back(i);
