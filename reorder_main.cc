@@ -30,7 +30,9 @@ int main(int argc, char** argv) {
       ("max_leaves", po::value<int>()->default_value(5)->required(),
           "Maximum number of leaves in rules that are reordered")
       ("max_tree_size", po::value<int>()->default_value(8)->required(),
-          "Maximum size of a tree rule that is reordered");
+          "Maximum size of a tree rule that is reordered")
+      ("stats_file", po::value<string>(),
+          "Target file for writing stats about the reordering grammar");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -93,6 +95,13 @@ int main(int argc, char** argv) {
     cout << "\n";
   }
   cerr << "Done..." << endl;
+
+  if (vm.count("stats_file")) {
+    cerr << "Writing grammar statistics..." << endl;
+    ofstream stats_stream(vm["stats_file"].as<string>());
+    grammar->DisplayRuleStats(stats_stream, dictionary);
+    cerr << "Done..." << endl;
+  }
 
   return 0;
 }

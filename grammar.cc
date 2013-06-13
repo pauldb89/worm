@@ -153,3 +153,50 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
 vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
   return rules[root_tag];
 }
+
+void Grammar::UpdateRuleStats(const Rule& rule) {
+  const AlignedTree& tree = rule.first;
+  const String& reordering = rule.second;
+  bool no_reordering = true;
+  int target_index = 0, var_index = 0;
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    if (leaf->IsSetWord() ^ reordering[target_index].IsSetWord()) {
+      no_reordering = false;
+      break;
+    }
+
+    if (leaf->IsSetWord() && reordering[target_index].IsSetWord() &&
+        leaf->GetWord() != reordering[target_index].GetWord()) {
+      no_reordering = false;
+      break;
+    }
+
+    if (!leaf->IsSetWord() && !reordering[target_index].IsSetWord() &&
+        var_index != reordering[target_index].GetVarIndex()) {
+      no_reordering = false;
+      break;
+    }
+
+    var_index += !leaf->IsSetWord();
+    ++target_index;
+  }
+
+  if (!no_reordering) {
+    #pragma omp critical
+    ++rule_counts[rule];
+  }
+}
+
+void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary) {
+  vector<pair<int, Rule>> top_rules;
+  for (auto rule: rule_counts) {
+    top_rules.push_back(make_pair(rule.second, rule.first));
+  }
+
+  sort(top_rules.begin(), top_rules.end(), greater<pair<int, Rule>>());
+
+  for (auto rule: top_rules) {
+    WriteSTSGRule(stream, rule.second, dictionary);
+    stream << " ||| " << rule.first << endl;
+  }
+}

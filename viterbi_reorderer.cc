@@ -77,8 +77,6 @@ String ViterbiReorderer::ConstructReordering(
   // If the subtree was impossible to parse, assume the children of the current
   // node do not need to be reordered.
   if (best_rules.count(tree_node) == 0) {
-    // cerr << "Skipping rule at: " << dictionary.GetToken(tree_node->GetTag())
-    //      << endl;
     skipped_nodes += tree_node.number_of_children();
 
     if (tree_node.number_of_children() == 0) {
@@ -95,8 +93,7 @@ String ViterbiReorderer::ConstructReordering(
   }
 
   const Rule& rule = best_rules.at(tree_node);
-  // WriteSTSGRule(cerr, rule, dictionary);
-  // cerr << endl;
+  grammar->UpdateRuleStats(rule);
   const AlignedTree& frag = rule.first;
   vector<NodeIter> frontier_variables = GetFrontierVariables(
       tree, tree_node, frag, frag.begin());

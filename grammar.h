@@ -2,6 +2,7 @@
 #define _GRAMMAR_H_
 
 #include <fstream>
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -22,6 +23,10 @@ class Grammar {
 
   vector<pair<Rule, double>> GetRules(int tag);
 
+  void UpdateRuleStats(const Rule& rule);
+
+  void DisplayRuleStats(ostream& stream, Dictionary& dictionary);
+
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the
   // alignment. These links may appear due to symmetrization.
@@ -36,6 +41,7 @@ class Grammar {
   double penalty;
   int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
+  map<Rule, int> rule_counts;
 };
 
 #endif
