@@ -20,8 +20,7 @@ int main(int argc, char **argv) {
   po::options_description cmdline_specific("Command line options");
   cmdline_specific.add_options()
       ("help,h", "Show available options")
-      ("config,c", po::value<string>()->default_value("data/worm/sampler.ini"),
-          "Path to config file");
+      ("config,c", po::value<string>(), "Path to config file");
 
   po::options_description general_options("General options");
   general_options.add_options()
@@ -35,17 +34,17 @@ int main(int argc, char **argv) {
       ("align", "Infer alignments instead of a STSG grammar")
       ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
-      ("alpha", po::value<double>()->default_value(1.0),
+      ("alpha", po::value<double>()->default_value(1.0)->required(),
           "Dirichlet process concentration parameter")
-      ("iterations", po::value<int>()->default_value(100),
+      ("iterations", po::value<int>()->default_value(100)->required(),
           "Number of iterations")
-      ("pexpand", po::value<double>()->default_value(0.5),
+      ("pexpand", po::value<double>()->default_value(0.5)->required(),
           "Param. for the Bernoulli distr. for a node to be split")
-      ("pchild", po::value<double>()->default_value(0.5),
+      ("pchild", po::value<double>()->default_value(0.5)->required(),
           "Param. for the geom. distr. for the number of children")
-      ("pterm", po::value<double>()->default_value(0.5),
+      ("pterm", po::value<double>()->default_value(0.5)->required(),
           "Param. for the geom. distr. for the number of target terminals")
-      ("seed", po::value<unsigned int>()->default_value(0),
+      ("seed", po::value<unsigned int>()->default_value(0)->required(),
           "Seed for random generator")
       ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
       ("ibm1-source-vcb", po::value<string>()->required(),
@@ -71,8 +70,10 @@ int main(int argc, char **argv) {
 
   po::options_description config_options;
   config_options.add(general_options);
-  ifstream config_stream(vm["config"].as<string>());
-  po::store(po::parse_config_file(config_stream, config_options), vm);
+  if (vm.count("config")) {
+    ifstream config_stream(vm["config"].as<string>());
+    po::store(po::parse_config_file(config_stream, config_options), vm);
+  }
 
   po::notify(vm);
 
