@@ -16,10 +16,13 @@ namespace po = boost::program_options;
 typedef high_resolution_clock Clock;
 
 int main(int argc, char** argv) {
-  po::options_description desc("Command line options");
-
-  desc.add_options()
+  po::options_description cmdline_specific("Command line options");
+  cmdline_specific.add_options()
       ("help", "Show available options")
+      ("config", po::value<string>(), "Path to config file");
+
+  po::options_description general_options("General options");
+  general_options.add_options()
       ("grammar,g", po::value<string>()->required(), "Path to grammar file")
       ("alignment,a", po::value<string>()->required(),
           "Path to file containing rule alignments")
@@ -35,11 +38,20 @@ int main(int argc, char** argv) {
           "Target file for writing stats about the reordering grammar");
 
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::options_description cmdline_options;
+  cmdline_options.add(cmdline_specific).add(general_options);
+  po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
 
   if (vm.count("help")) {
-    cout << desc << endl;
+    cout << cmdline_options << endl;
     return 0;
+  }
+
+  if (vm.count("config")) {
+    po::options_description config_options;
+    config_options.add(general_options);
+    ifstream config_stream(vm["config"].as<string>());
+    po::store(po::parse_config_file(config_stream, config_options), vm);
   }
 
   po::notify(vm);

@@ -68,9 +68,9 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  po::options_description config_options;
-  config_options.add(general_options);
   if (vm.count("config")) {
+    po::options_description config_options;
+    config_options.add(general_options);
     ifstream config_stream(vm["config"].as<string>());
     po::store(po::parse_config_file(config_stream, config_options), vm);
   }
