@@ -90,9 +90,11 @@ int main(int argc, char** argv) {
     #pragma omp critical
     {
       ++sentence_index;
-      cerr << ".";
-      if (sentence_index % 100 == 0) {
-        cerr << " [" << sentence_index << "]" << endl;
+      if (sentence_index % 10 == 0) {
+        cerr << ".";
+        if (sentence_index % 1000 == 0) {
+          cerr << " [" << sentence_index << "]" << endl;
+        }
       }
     }
   }
