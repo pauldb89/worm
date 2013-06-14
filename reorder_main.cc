@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
-      reorderings[i] = reorderer.Reorder(input_trees[i]);
+      reorderings[i] = reorderer.Reorder(input_trees[i], i);
     }
 
     #pragma omp critical

@@ -23,7 +23,7 @@ class Grammar {
 
   vector<pair<Rule, double>> GetRules(int tag);
 
-  void UpdateRuleStats(const Rule& rule);
+  void UpdateRuleStats(const Rule& rule, int sentence_index);
 
   void DisplayRuleStats(ostream& stream, Dictionary& dictionary);
 
@@ -41,7 +41,9 @@ class Grammar {
   double penalty;
   int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
+
   map<Rule, int> rule_counts;
+  map<int, vector<Rule>> reordering_rules;
 };
 
 #endif
