@@ -188,15 +188,20 @@ void Grammar::UpdateRuleStats(const Rule& rule) {
 }
 
 void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary) {
+  double total_rules = 0;
   vector<pair<int, Rule>> top_rules;
   for (auto rule: rule_counts) {
     top_rules.push_back(make_pair(rule.second, rule.first));
+    total_rules += rule.second;
   }
 
   sort(top_rules.begin(), top_rules.end(), greater<pair<int, Rule>>());
 
+  double num_rules = 0;
   for (auto rule: top_rules) {
+    num_rules += rule.first;
     WriteSTSGRule(stream, rule.second, dictionary);
-    stream << " ||| " << rule.first << endl;
+    stream << " ||| " << rule.first << " ||| " << num_rules / total_rules
+           << endl;
   }
 }
