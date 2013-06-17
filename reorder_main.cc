@@ -72,11 +72,13 @@ int main(int argc, char** argv) {
   }
   cerr << "Done..." << endl;
 
+  cerr << "Reading training data..." << endl;
   vector<AlignedTree> input_trees;
   while (cin.good()) {
     input_trees.push_back(ReadParseTree(cin, dictionary));
     cin >> ws;
   }
+  cerr << "Done..." << endl;
 
   int sentence_index = 0;
   Clock::time_point start_time = Clock::now();
