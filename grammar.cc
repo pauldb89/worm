@@ -151,6 +151,9 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
 }
 
 vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
+  if (!rules.count(root_tag)) {
+    return vector<pair<Rule, double>>();
+  }
   return rules[root_tag];
 }
 
