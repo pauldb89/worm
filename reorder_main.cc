@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
-      reorderings[i] = reorderer.Reorder(input_trees[i]);
+      reorderings[i] = reorderer.Reorder(input_trees[i], i);
     }
 
     #pragma omp critical
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
   if (vm.count("stats_file")) {
     cerr << "Writing grammar statistics..." << endl;
     ofstream stats_stream(vm["stats_file"].as<string>());
-    grammar->DisplayRuleStats(stats_stream, dictionary);
+    grammar->DisplayRuleStats(stats_stream, dictionary, reorderings.size());
     cerr << "Done..." << endl;
   }
 

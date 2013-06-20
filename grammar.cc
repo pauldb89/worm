@@ -167,7 +167,7 @@ vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
   return rules[root_tag];
 }
 
-void Grammar::UpdateRuleStats(const Rule& rule) {
+void Grammar::UpdateRuleStats(const Rule& rule, int sentence_index) {
   const AlignedTree& tree = rule.first;
   const String& reordering = rule.second;
   bool no_reordering = true;
@@ -196,11 +196,15 @@ void Grammar::UpdateRuleStats(const Rule& rule) {
 
   if (!no_reordering) {
     #pragma omp critical
-    ++rule_counts[rule];
+    {
+      ++rule_counts[rule];
+      reordering_rules[sentence_index].push_back(rule);
+    }
   }
 }
 
-void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary) {
+void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary,
+                               int num_sentences) {
   vector<pair<int, Rule>> top_rules;
   for (auto rule: rule_counts) {
     top_rules.push_back(make_pair(rule.second, rule.first));
@@ -212,5 +216,17 @@ void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary) {
     WriteSTSGRule(stream, rule.second, dictionary);
     stream << " ||| " << reordering_probs[rule.second] << " ||| "
            << rule.first << endl;
+  }
+
+  ofstream debug_stream("debug.log");
+  for (int i = 0; i < num_sentences; ++i) {
+    if (reordering_rules[i].size()) {
+      WriteSTSGRule(debug_stream, reordering_rules[i][0], dictionary);
+    }
+    for (size_t j = 1; j < reordering_rules[i].size(); ++j) {
+      debug_stream << " ### ";
+      WriteSTSGRule(debug_stream, reordering_rules[i][j], dictionary);
+    }
+    debug_stream << endl;
   }
 }
