@@ -11,7 +11,6 @@ Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
                  Dictionary& dictionary, double penalty,
                  int max_leaves, int max_tree_size) :
     penalty(penalty), max_leaves(max_leaves), max_tree_size(max_tree_size) {
-  map<Rule, double> reordering_probs;
   while (!grammar_stream.eof()) {
     pair<Rule, double> entry = ReadRule(grammar_stream, dictionary);
     Alignment alignment;
@@ -30,6 +29,17 @@ Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
 
   for (auto rule: reordering_probs) {
     rules[rule.first.first.GetRootTag()].push_back(rule);
+  }
+}
+
+Grammar::Grammar(ifstream& grammar_stream, Dictionary& dictionary,
+                 double penalty, int max_leaves, int max_tree_size) :
+    penalty(penalty), max_leaves(max_leaves), max_tree_size(max_tree_size) {
+  while (!grammar_stream.eof()) {
+    pair<Rule, double> rule = ReadRule(grammar_stream, dictionary);
+    reordering_probs[rule.first] = rule.second;
+    rules[rule.first.first.GetRootTag()].push_back(rule);
+    grammar_stream >> ws;
   }
 }
 
@@ -186,25 +196,24 @@ void Grammar::UpdateRuleStats(const Rule& rule) {
 
   if (!no_reordering) {
     #pragma omp critical
-    ++rule_counts[rule];
+    {
+      ++rule_counts[rule];
+    }
   }
 }
 
-void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary) {
-  double total_rules = 0;
+void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary,
+                               int num_sentences) {
   vector<pair<int, Rule>> top_rules;
   for (auto rule: rule_counts) {
     top_rules.push_back(make_pair(rule.second, rule.first));
-    total_rules += rule.second;
   }
 
   sort(top_rules.begin(), top_rules.end(), greater<pair<int, Rule>>());
 
-  double num_rules = 0;
   for (auto rule: top_rules) {
-    num_rules += rule.first;
     WriteSTSGRule(stream, rule.second, dictionary);
-    stream << " ||| " << rule.first << " ||| " << num_rules / total_rules
-           << endl;
+    stream << " ||| " << reordering_probs[rule.second] << " ||| "
+           << rule.first << endl;
   }
 }

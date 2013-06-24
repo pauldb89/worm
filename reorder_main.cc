@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   po::options_description general_options("General options");
   general_options.add_options()
       ("grammar,g", po::value<string>()->required(), "Path to grammar file")
-      ("alignment,a", po::value<string>()->required(),
+      ("alignment,a", po::value<string>(),
           "Path to file containing rule alignments")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads for reordering")
@@ -58,11 +58,18 @@ int main(int argc, char** argv) {
 
   cerr << "Constructing reordering grammar..." << endl;
   Dictionary dictionary;
+  shared_ptr<Grammar> grammar;
   ifstream grammar_stream(vm["grammar"].as<string>());
-  ifstream alignment_stream(vm["alignment"].as<string>());
-  shared_ptr<Grammar> grammar = make_shared<Grammar>(
-      grammar_stream, alignment_stream, dictionary, vm["penalty"].as<double>(),
-      vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
+  if (vm.count("alignment")) {
+    ifstream alignment_stream(vm["alignment"].as<string>());
+    grammar = make_shared<Grammar>(grammar_stream, alignment_stream, dictionary,
+        vm["penalty"].as<double>(), vm["max_leaves"].as<int>(),
+        vm["max_tree_size"].as<int>());
+  } else {
+    grammar = make_shared<Grammar>(grammar_stream, dictionary,
+        vm["penalty"].as<double>(), vm["max_leaves"].as<int>(),
+        vm["max_tree_size"].as<int>());
+  }
   cerr << "Done..." << endl;
 
   cerr << "Reading training data..." << endl;
@@ -115,7 +122,7 @@ int main(int argc, char** argv) {
   if (vm.count("stats_file")) {
     cerr << "Writing grammar statistics..." << endl;
     ofstream stats_stream(vm["stats_file"].as<string>());
-    grammar->DisplayRuleStats(stats_stream, dictionary);
+    grammar->DisplayRuleStats(stats_stream, dictionary, reorderings.size());
     cerr << "Done..." << endl;
   }
 

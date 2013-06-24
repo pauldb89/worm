@@ -21,11 +21,15 @@ class Grammar {
           Dictionary& dictionary, double penalty,
           int max_leaves, int max_tree_size);
 
+  Grammar(ifstream& grammar_stream, Dictionary& dictionary,
+          double penalty, int max_leaves, int max_tree_size);
+
   vector<pair<Rule, double>> GetRules(int tag);
 
   void UpdateRuleStats(const Rule& rule);
 
-  void DisplayRuleStats(ostream& stream, Dictionary& dictionary);
+  void DisplayRuleStats(ostream& stream, Dictionary& dictionary,
+                        int num_sentences);
 
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the
@@ -41,6 +45,7 @@ class Grammar {
   double penalty;
   int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
+  map<Rule, double> reordering_probs;
   map<Rule, int> rule_counts;
 };
 
