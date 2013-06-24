@@ -168,33 +168,7 @@ vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
 }
 
 void Grammar::UpdateRuleStats(const Rule& rule) {
-  const AlignedTree& tree = rule.first;
-  const String& reordering = rule.second;
-  bool no_reordering = true;
-  int target_index = 0, var_index = 0;
-  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
-    if (leaf->IsSetWord() ^ reordering[target_index].IsSetWord()) {
-      no_reordering = false;
-      break;
-    }
-
-    if (leaf->IsSetWord() && reordering[target_index].IsSetWord() &&
-        leaf->GetWord() != reordering[target_index].GetWord()) {
-      no_reordering = false;
-      break;
-    }
-
-    if (!leaf->IsSetWord() && !reordering[target_index].IsSetWord() &&
-        var_index != reordering[target_index].GetVarIndex()) {
-      no_reordering = false;
-      break;
-    }
-
-    var_index += !leaf->IsSetWord();
-    ++target_index;
-  }
-
-  if (!no_reordering) {
+  if (IsReorderingRule(rule)) {
     #pragma omp critical
     {
       ++rule_counts[rule];
@@ -216,4 +190,30 @@ void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary,
     stream << " ||| " << reordering_probs[rule.second] << " ||| "
            << rule.first << endl;
   }
+}
+
+bool Grammar::IsReorderingRule(const Rule& rule) {
+  const AlignedTree& tree = rule.first;
+  const String& reordering = rule.second;
+  int target_index = 0, var_index = 0;
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    if (leaf->IsSetWord() ^ reordering[target_index].IsSetWord()) {
+      return true;
+    }
+
+    if (leaf->IsSetWord() && reordering[target_index].IsSetWord() &&
+        leaf->GetWord() != reordering[target_index].GetWord()) {
+      return true;
+    }
+
+    if (!leaf->IsSetWord() && !reordering[target_index].IsSetWord() &&
+        var_index != reordering[target_index].GetVarIndex()) {
+      return true;
+    }
+
+    var_index += !leaf->IsSetWord();
+    ++target_index;
+  }
+
+  return false;
 }

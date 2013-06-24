@@ -42,6 +42,9 @@ class Grammar {
   String ConstructReordering(const vector<NodeIter>& source_items,
                              const vector<int>& permutation);
 
+  // Checks if the STSG rule actually implies any kind of reordering.
+  bool IsReorderingRule(const Rule& rule);
+
   double penalty;
   int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
