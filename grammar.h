@@ -26,7 +26,7 @@ class Grammar {
 
   vector<pair<Rule, double>> GetRules(int tag);
 
-  void UpdateRuleStats(const Rule& rule, int sentence_index);
+  void UpdateRuleStats(const Rule& rule);
 
   void DisplayRuleStats(ostream& stream, Dictionary& dictionary,
                         int num_sentences);
@@ -47,7 +47,6 @@ class Grammar {
   unordered_map<int, vector<pair<Rule, double>>> rules;
   map<Rule, double> reordering_probs;
   map<Rule, int> rule_counts;
-  map<int, vector<Rule>> reordering_rules;
 };
 
 #endif

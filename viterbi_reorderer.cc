@@ -12,7 +12,7 @@ ViterbiReorderer::ViterbiReorderer(shared_ptr<Grammar> grammar,
                                    Dictionary& dictionary) :
     grammar(grammar), dictionary(dictionary), total_nodes(0), skipped_nodes(0) {}
 
-String ViterbiReorderer::Reorder(const AlignedTree& tree, int sentence_index) {
+String ViterbiReorderer::Reorder(const AlignedTree& tree) {
   total_nodes += tree.size();
 
   map<NodeIter, double> cache;
@@ -33,7 +33,7 @@ String ViterbiReorderer::Reorder(const AlignedTree& tree, int sentence_index) {
     }
   }
 
-  String result = ConstructReordering(best_rules, tree, tree.begin(), sentence_index);
+  String result = ConstructReordering(best_rules, tree, tree.begin());
   for (size_t i = 0; i < result.size(); ++i) {
     result[i].SetWordIndex(i);
   }
@@ -72,7 +72,7 @@ double ViterbiReorderer::ComputeProbability(
 
 String ViterbiReorderer::ConstructReordering(
     const map<NodeIter, Rule>& best_rules, const AlignedTree& tree,
-    NodeIter tree_node, int sentence_index) {
+    NodeIter tree_node) {
   String result;
   // If the subtree was impossible to parse, assume the children of the current
   // node do not need to be reordered.
@@ -85,7 +85,7 @@ String ViterbiReorderer::ConstructReordering(
       for (auto child = tree.begin(tree_node);
            child != tree.end(tree_node);
            ++child) {
-        String subresult = ConstructReordering(best_rules, tree, child, sentence_index);
+        String subresult = ConstructReordering(best_rules, tree, child);
         copy(subresult.begin(), subresult.end(), back_inserter(result));
       }
     }
@@ -93,7 +93,7 @@ String ViterbiReorderer::ConstructReordering(
   }
 
   const Rule& rule = best_rules.at(tree_node);
-  grammar->UpdateRuleStats(rule, sentence_index);
+  grammar->UpdateRuleStats(rule);
   const AlignedTree& frag = rule.first;
   vector<NodeIter> frontier_variables = GetFrontierVariables(
       tree, tree_node, frag, frag.begin());
@@ -104,7 +104,7 @@ String ViterbiReorderer::ConstructReordering(
       result.push_back(node);
     } else {
       auto subresult = ConstructReordering(
-          best_rules, tree, frontier_variables[node.GetVarIndex()], sentence_index);
+          best_rules, tree, frontier_variables[node.GetVarIndex()]);
       copy(subresult.begin(), subresult.end(), back_inserter(result));
     }
   }

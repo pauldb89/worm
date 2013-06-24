@@ -19,7 +19,7 @@ class ViterbiReorderer {
  public:
   ViterbiReorderer(shared_ptr<Grammar> grammar, Dictionary& dictionary);
 
-  String Reorder(const AlignedTree& tree, int sentence_index);
+  String Reorder(const AlignedTree& tree);
 
   double GetSkippedNodesRatio();
 
@@ -29,8 +29,7 @@ class ViterbiReorderer {
                             const AlignedTree& frag, NodeIter frag_node);
 
   String ConstructReordering(const map<NodeIter, Rule>& best_rules,
-                             const AlignedTree& tree, NodeIter tree_node,
-                             int sentence_index);
+                             const AlignedTree& tree, NodeIter tree_node);
 
   vector<NodeIter> GetFrontierVariables(
       const AlignedTree& tree, NodeIter tree_node,
