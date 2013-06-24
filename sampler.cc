@@ -59,16 +59,21 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
   prob_tt = -log(target_terminals.size());
 }
 
-void Sampler::Sample(int iterations) {
+void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
   InitializeRuleCounts();
 
   for (int iter = 0; iter < iterations; ++iter) {
     Clock::time_point start_time = Clock::now();
     DisplayStats();
 
+    if (iter % log_frequency == 0) {
+      cerr << "Serializing the grammar..." << endl;
+      SerializeGrammar(prefix + "." + to_string(iter), false);
+      cerr << "Done..." << endl;
+    }
+
     random_shuffle(training->begin(), training->end());
     for (auto& instance: *training) {
-
       // Ignore parse failures.
       if (instance.first.size() <= 1) {
         continue;

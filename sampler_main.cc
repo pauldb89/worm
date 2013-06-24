@@ -38,6 +38,8 @@ int main(int argc, char **argv) {
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100)->required(),
           "Number of iterations")
+      ("log_freq", po::value<int>()->default_value(0)->required(),
+          "Frequency (in iterations) for serializing the grammar to disk")
       ("pexpand", po::value<double>()->default_value(0.5)->required(),
           "Param. for the Bernoulli distr. for a node to be split")
       ("pchild", po::value<double>()->default_value(0.5)->required(),
@@ -127,15 +129,15 @@ int main(int argc, char **argv) {
                   reverse_table, generator, vm.count("stats"),
                   vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
                   vm["pchild"].as<double>(), vm["pterm"].as<double>());
-  sampler.Sample(vm["iterations"].as<int>());
+  string prefix = vm["output"].as<string>();
+  sampler.Sample(prefix, vm["iterations"].as<int>(), vm["log_freq"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
-  string output_prefix = vm["output"].as<string>();
   if (vm.count("align")) {
-    sampler.SerializeAlignments(output_prefix);
+    sampler.SerializeAlignments(prefix);
   } else {
-    sampler.SerializeGrammar(output_prefix, vm.count("scfg"));
+    sampler.SerializeGrammar(prefix, vm.count("scfg"));
   }
   cerr << "Done..." << endl;
 
