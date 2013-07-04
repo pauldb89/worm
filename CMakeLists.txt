@@ -12,6 +12,6 @@ set(sampler_SRCS aligned_tree.cc dictionary.cc node.cc pcfg_table.cc sampler.cc 
 add_executable(sampler ${sampler_SRCS})
 target_link_libraries(sampler ${Boost_LIBRARIES})
 
-set(reorder_SRCS aligned_tree.cc dictionary.cc grammar.cc node.cc reorder_main.cc util.cc viterbi_reorderer.cc)
+set(reorder_SRCS aligned_tree.cc dictionary.cc grammar.cc node.cc reorder_main.cc reorderer.cc util.cc viterbi_reorderer.cc)
 add_executable(reorder ${reorder_SRCS})
 target_link_libraries(reorder ${Boost_LIBRARIES})
