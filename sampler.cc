@@ -245,6 +245,7 @@ void Sampler::SampleAlignments(const Instance& instance) {
       total_prob = Log<double>::add(total_prob, prob);
     }
 
+    // TODO(pauldb): Maybe log-multiply (add) total_prob to value instead?
     // Normalize probabilities
     for (auto &prob: probs) {
       prob -= total_prob;
