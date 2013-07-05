@@ -7,6 +7,7 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 #include "grammar.h"
+#include "single_sample_reorderer.h"
 #include "viterbi_reorderer.h"
 
 using namespace std;
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
   cerr << "Reordering will use " << num_threads << " threads." << endl;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < input_trees.size(); ++i) {
-    ViterbiReorderer reorderer(grammar, dictionary);
+    ViterbiReorderer reorderer(grammar);
 
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
