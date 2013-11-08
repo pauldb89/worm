@@ -7,7 +7,7 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 #include "grammar.h"
-#include "single_sample_reorderer.h"
+#include "multi_sample_reorderer.h"
 #include "viterbi_reorderer.h"
 
 using namespace std;
@@ -29,6 +29,11 @@ int main(int argc, char** argv) {
           "Path to file containing rule alignments")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads for reordering")
+      ("iterations", po::value<unsigned int>(),
+          "Number of samples to determine the reordering for each parse tree. "
+          "If not set, a max-derivation reorderer will be used instead.")
+      ("seed", po::value<int>()->default_value(0),
+          "Seed for random generator. Set to 0 if seed should be random.")
       ("penalty", po::value<double>()->default_value(0.1)->required(),
           "Displacement penalty for reordering")
       ("max_leaves", po::value<int>()->default_value(5)->required(),
@@ -81,6 +86,17 @@ int main(int argc, char** argv) {
   }
   cerr << "Done..." << endl;
 
+  unsigned int num_iterations = 0;
+  if (vm.count("iterations")) {
+    num_iterations = vm["iterations"].as<unsigned int>();
+  }
+  if (num_iterations > 0) {
+    cerr << "Using sampling-based reordering with " << num_iterations
+         << " iterations..." << endl;
+  } else {
+    cerr << "Using max-derivation (Viterbi) reorderer..." << endl;
+  }
+
   int sentence_index = 0;
   Clock::time_point start_time = Clock::now();
   vector<String> reorderings(input_trees.size());
@@ -88,13 +104,23 @@ int main(int argc, char** argv) {
   cerr << "Reordering will use " << num_threads << " threads." << endl;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < input_trees.size(); ++i) {
-    ViterbiReorderer reorderer(grammar);
+    shared_ptr<ReordererBase> reorderer;
+    if (num_iterations) {
+      unsigned int seed = vm["seed"].as<unsigned int>();
+      if (seed == 0) {
+        seed = time(NULL);
+      }
+      RandomGenerator generator(seed);
+      reorderer = make_shared<MultiSampleReorderer>(grammar, generator, num_iterations);
+    } else {
+      reorderer = make_shared<ViterbiReorderer>(grammar);
+    }
 
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
-      reorderings[i] = reorderer.Reorder(input_trees[i]);
+      reorderings[i] = reorderer->Reorder(input_trees[i]);
     }
 
     #pragma omp critical
