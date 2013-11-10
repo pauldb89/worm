@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
   po::options_description general_options("General options");
   general_options.add_options()
       ("trees,t", po::value<string>()->required(),
-          "File continaing source parse trees in .ptb format")
+          "File containing source parse trees in .ptb format")
       ("strings,s", po::value<string>()->required(),
-          "File continaing target strings")
+          "File containing target strings")
       ("alignment,a", po::value<string>()->required(),
           "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output prefix")
