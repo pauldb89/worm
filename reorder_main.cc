@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
           "Path to file containing rule alignments")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads for reordering")
-      ("iterations", po::value<unsigned int>(),
+      ("iterations", po::value<unsigned int>()->default_value(0),
           "Number of samples to determine the reordering for each parse tree. "
           "If not set, a max-derivation reorderer will be used instead.")
       ("seed", po::value<int>()->default_value(0),
