@@ -35,7 +35,7 @@ PCFGTable::PCFGTable(const shared_ptr<vector<Instance>>& training) {
   }
 }
 
-double PCFGTable::GetLogProbability(int lhs, const vector<int>& rhs) {
+double PCFGTable::GetLogProbability(int lhs, const vector<int>& rhs) const {
   auto lhs_result = rule_probs.find(lhs);
   if (lhs_result != rule_probs.end()) {
     auto rhs_result = lhs_result->second.find(rhs);
