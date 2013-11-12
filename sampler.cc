@@ -18,6 +18,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  RandomGenerator& generator, bool enable_all_stats,
                  double alpha, double pexpand, double pchild, double pterm) :
     training(training),
+    counts(alpha),
     dictionary(dictionary),
     pcfg_table(pcfg_table),
     forward_table(forward_table),
@@ -41,7 +42,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     for (auto node: instance.first) {
       if (!non_terminals.count(node.GetTag())) {
         non_terminals.insert(node.GetTag());
-        counts[node.GetTag()] = RuleCounts(alpha, false);
+        counts.AddNonterminal(node.GetTag());
       }
 
       if (node.IsSetWord()) {
@@ -139,9 +140,9 @@ void Sampler::DisplayStats() {
 }
 
 double Sampler::ComputeDataLikelihood() {
-  unordered_map<int, RuleCounts> new_counts;
-  for (auto entry: counts) {
-    new_counts[entry.first] = RuleCounts(alpha, false);
+  SynchronizedRuleCounts new_counts(alpha);
+  for (auto nonterminal: counts.GetNonterminals()) {
+    new_counts.AddNonterminal(nonterminal);
   }
 
   double likelihood = 0;
@@ -151,10 +152,9 @@ double Sampler::ComputeDataLikelihood() {
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         const Rule& rule = GetRule(instance, node);
-        int root_tag = node->GetTag();
         double prob = ComputeLogBaseProbability(rule);
-        likelihood += new_counts[root_tag].log_prob(rule, prob);
-        new_counts[root_tag].increment(rule);
+        likelihood += new_counts.GetLogProbability(rule, prob);
+        new_counts.Increment(rule);
       }
     }
   }
@@ -532,40 +532,35 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 }
 
 double Sampler::ComputeLogProbability(const Rule& rule) {
-  int tag = rule.first.GetRootTag();
-  return counts[tag].log_prob(rule, ComputeLogBaseProbability(rule));
+  return counts.GetLogProbability(rule, ComputeLogBaseProbability(rule));
 }
 
 double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2) {
   double prob_r1 = ComputeLogProbability(r1);
 
-  int tag = r2.first.GetRootTag();
   int same_rules = r1 == r2;
-  int same_tags = r1.first.GetRootTag() == tag;
-  return prob_r1 + counts[tag].log_prob(r2, same_rules, same_tags,
-                                        ComputeLogBaseProbability(r2));
+  int same_tags = r1.first.GetRootTag() == r2.first.GetRootTag();
+  return prob_r1 + counts.GetLogProbability(
+      r2, same_rules, same_tags, ComputeLogBaseProbability(r2));
 }
 
 double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2,
                                       const Rule& r3) {
   double prob_r12 = ComputeLogProbability(r1, r2);
 
-  int tag = r3.first.GetRootTag();
   int same_rules = (r1 == r3) + (r2 == r3);
-  int same_tags = (r1.first.GetRootTag() == tag) +
-                  (r2.first.GetRootTag() == tag);
+  int same_tags = (r1.first.GetRootTag() == r3.first.GetRootTag()) +
+                  (r2.first.GetRootTag() == r3.first.GetRootTag());
   return prob_r12 + counts[tag].log_prob(r3, same_rules, same_tags,
                                          ComputeLogBaseProbability(r3));
 }
 
 void Sampler::IncrementRuleCount(const Rule& rule) {
-  int tag = rule.first.GetRootTag();
-  counts[tag].increment(rule);
+  counts.Increment(rule);
 }
 
 void Sampler::DecrementRuleCount(const Rule& rule) {
-  int tag = rule.first.GetRootTag();
-  counts[tag].decrement(rule);
+  counts.Decrement(rule);
 }
 
 Alignment Sampler::ConstructNonterminalLinks(const Rule& rule) {
