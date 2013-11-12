@@ -17,7 +17,7 @@ class PCFGTable {
  public:
   PCFGTable(const shared_ptr<vector<Instance>>& training);
 
-  double GetLogProbability(int lhs, const vector<int>& rhs);
+  double GetLogProbability(int lhs, const vector<int>& rhs) const;
 
  private:
   unordered_map<int, unordered_map<vector<int>, double, VectorHash>> rule_probs;
