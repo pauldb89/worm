@@ -552,7 +552,8 @@ double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2,
 
   int tag = r3.first.GetRootTag();
   int same_rules = (r1 == r3) + (r2 == r3);
-  int same_tags = r1.first.GetRootTag() == tag + r2.first.GetRootTag() == tag;
+  int same_tags = (r1.first.GetRootTag() == tag) +
+                  (r2.first.GetRootTag() == tag);
   return prob_r12 + counts[tag].log_prob(r3, same_rules, same_tags,
                                          ComputeLogBaseProbability(r3));
 }
