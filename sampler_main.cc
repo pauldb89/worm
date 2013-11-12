@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
       ("align", "Infer alignments instead of a STSG grammar")
       ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
+      ("min_rule_count", po::value<int>()->default_value(0)->required(),
+               "Minimum count for a rule to be used for reordering")
       ("alpha", po::value<double>()->default_value(1.0)->required(),
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100)->required(),
@@ -127,8 +129,9 @@ int main(int argc, char **argv) {
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
                   reverse_table, generator, vm.count("stats"),
-                  vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
-                  vm["pchild"].as<double>(), vm["pterm"].as<double>());
+                  vm["min_rule_count"].as<int>(), vm["alpha"].as<double>(),
+                  vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
+                  vm["pterm"].as<double>());
   string prefix = vm["output"].as<string>();
   sampler.Sample(prefix, vm["iterations"].as<int>(), vm["log_freq"].as<int>());
   cerr << "Done..." << endl;

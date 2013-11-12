@@ -16,7 +16,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
                  RandomGenerator& generator, bool enable_all_stats,
-                 double alpha, double pexpand, double pchild, double pterm) :
+                 int min_rule_count, double alpha,
+                 double pexpand, double pchild, double pterm) :
     training(training),
     dictionary(dictionary),
     pcfg_table(pcfg_table),
@@ -25,6 +26,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     generator(generator),
     uniform_distribution(0, 1),
     enable_all_stats(enable_all_stats),
+    min_rule_count(min_rule_count),
     alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -718,7 +720,7 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
 }
 
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
-  unordered_map<int, map<Rule, double>> rule_probs;
+  unordered_map<int, map<Rule, int>> rule_counts;
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
 
@@ -731,10 +733,7 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);
-        int root_tag = node->GetTag();
-        if (rule_probs[root_tag].find(rule) == rule_probs[root_tag].end()) {
-          rule_probs[root_tag][rule] = ComputeLogProbability(rule);
-        }
+        ++rule_counts[node->GetTag()][rule];
       }
     }
   }
@@ -742,20 +741,24 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   ofstream gout(output_prefix + ".grammar");
   ofstream fwd_out(output_prefix + ".fwd");
   ofstream rev_out(output_prefix + ".rev");
-  for (auto entry: rule_probs) {
-    vector<pair<double, Rule>> rules;
+  for (auto entry: rule_counts) {
+    vector<pair<int, Rule>> rules;
+    double root_total_count = 0;
     for (auto rule_entry: entry.second) {
-      rules.push_back(make_pair(rule_entry.second, rule_entry.first));
+      if (rule_entry.second >= min_rule_count) {
+        root_total_count += rule_entry.second;
+        rules.push_back(make_pair(rule_entry.second, rule_entry.first));
+      }
     }
 
-    sort(rules.begin(), rules.end(), greater<pair<double, Rule>>());
+    sort(rules.begin(), rules.end(), greater<pair<int, Rule>>());
     for (auto rule: rules) {
       if (scfg_format) {
         WriteSCFGRule(gout, rule.second, dictionary);
       } else {
         WriteSTSGRule(gout, rule.second, dictionary);
       }
-      gout << "||| " << exp(rule.first) << "\n";
+      gout << "||| " << rule.first / root_total_count << "\n";
 
       auto alignments = ConstructAlignments(rule.second);
       fwd_out << alignments.first << "\n";

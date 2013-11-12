@@ -24,7 +24,8 @@ class Sampler {
           const shared_ptr<PCFGTable>& pcfg_table,
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& reverse_table,
-          RandomGenerator& generator, bool enable_all_stats, double alpha,
+          RandomGenerator& generator, bool enable_all_stats,
+          int min_rule_count, double alpha,
           double pexpand, double pchild, double pterm);
 
   void Sample(const string& output_prefix, int iterations, int log_frequency);
@@ -93,6 +94,10 @@ class Sampler {
   uniform_real_distribution<double> uniform_distribution;
 
   bool enable_all_stats;
+
+  // Parameters for filtering the final rules.
+  int min_rule_count;
+
   double alpha;
   double prob_expand, prob_not_expand;
   double prob_stop_child, prob_cont_child;
