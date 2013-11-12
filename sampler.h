@@ -7,7 +7,7 @@
 
 #include "aligned_tree.h"
 #include "dictionary.h"
-#include "restaurant.h"
+#include "synchronized_restaurant.h"
 #include "util.h"
 
 using namespace std;
@@ -84,7 +84,7 @@ class Sampler {
 
   shared_ptr<vector<Instance>> training;
   vector<shared_ptr<Instance>> initial_order;
-  unordered_map<int, RuleCounts> counts;
+  SynchronizedRuleCounts counts;
 
   Dictionary& dictionary;
   shared_ptr<PCFGTable> pcfg_table;
