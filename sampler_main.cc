@@ -31,6 +31,8 @@ int main(int argc, char **argv) {
       ("alignment,a", po::value<string>()->required(),
           "File containing word alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output prefix")
+      ("threads", po::value<int>()->default_value(1)->required(),
+          "Number of threads to use for sampling")
       ("align", "Infer alignments instead of a STSG grammar")
       ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
@@ -81,6 +83,9 @@ int main(int argc, char **argv) {
 
   po::notify(vm);
 
+  int num_threads = vm["threads"].as<int>();
+  cerr << "Sampling with " << num_threads << " threads..." << endl;
+
   cerr << "Reading training data..." << endl;
   Dictionary dictionary;
   shared_ptr<vector<Instance>> training = make_shared<vector<Instance>>();
@@ -115,10 +120,12 @@ int main(int argc, char **argv) {
   cerr << "Reading translation tables..." << endl;
   ifstream forward_stream(vm["ibm1-forward"].as<string>());
   forward_table = make_shared<TranslationTable>(
-      forward_stream, source_vocabulary, target_vocabulary, dictionary);
+      forward_stream, source_vocabulary, target_vocabulary, dictionary,
+      num_threads);
   ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
   reverse_table = make_shared<TranslationTable>(
-      reverse_stream, target_vocabulary, source_vocabulary, dictionary);
+      reverse_stream, target_vocabulary, source_vocabulary, dictionary,
+      num_threads);
   cerr << "Done..." << endl;
 
   cerr << "Sampling..." << endl;
@@ -133,7 +140,8 @@ int main(int argc, char **argv) {
                   vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
                   vm["pterm"].as<double>());
   string prefix = vm["output"].as<string>();
-  sampler.Sample(prefix, vm["iterations"].as<int>(), vm["log_freq"].as<int>());
+  sampler.Sample(prefix, vm["iterations"].as<int>(),
+                 num_threads, vm["log_freq"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
