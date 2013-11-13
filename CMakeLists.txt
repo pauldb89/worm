@@ -7,6 +7,7 @@ find_package(Boost COMPONENTS program_options regex REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x ${OpenMP_CXX_FLAGS}")
+# set(CMAKE_BUILD_TYPE Debug)
 
 set(sampler_SRCS aligned_tree.cc dictionary.cc node.cc pcfg_table.cc sampler.cc
     sampler_main.cc synchronized_restaurant.cc translation_table.cc util.cc)

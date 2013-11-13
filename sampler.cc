@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include <omp.h>
+
 #include "node.h"
 #include "pcfg_table.h"
 #include "translation_table.h"
@@ -62,7 +64,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
   prob_tt = -log(target_terminals.size());
 }
 
-void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
+void Sampler::Sample(const string& prefix, int iterations,
+                     int num_threads, int log_frequency) {
   InitializeRuleCounts();
 
   for (int iter = 0; iter < iterations; ++iter) {
@@ -76,7 +79,10 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
     }
 
     random_shuffle(training->begin(), training->end());
-    for (auto& instance: *training) {
+    #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+    for (size_t i = 0; i < training->size(); ++i) {
+      Instance& instance = training->operator[](i);
+
       // Ignore parse failures.
       if (instance.first.size() <= 1) {
         continue;
@@ -121,8 +127,9 @@ void Sampler::CacheSentence(const Instance& instance) {
     target_words.push_back(node.GetWord());
   }
 
-  forward_table->CacheSentence(source_words, target_words);
-  reverse_table->CacheSentence(target_words, source_words);
+  int thread_id = omp_get_thread_num();
+  forward_table->CacheSentence(source_words, target_words, thread_id);
+  reverse_table->CacheSentence(target_words, source_words, thread_id);
 }
 
 void Sampler::DisplayStats() {
@@ -520,9 +527,9 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 
     // Use geometric mean on bidirectional IBM Model 1 probabilities.
     double prob_forward = forward_table->ComputeAverageLogProbability(
-        source_indexes, target_indexes);
+        source_indexes, target_indexes, omp_get_thread_num());
     double prob_reverse = reverse_table->ComputeAverageLogProbability(
-        target_indexes, source_indexes);
+        target_indexes, source_indexes, omp_get_thread_num());
     prob_str = 0.5 * (prob_forward + prob_reverse);
   }
 
@@ -553,8 +560,8 @@ double Sampler::ComputeLogProbability(const Rule& r1, const Rule& r2,
   int same_rules = (r1 == r3) + (r2 == r3);
   int same_tags = (r1.first.GetRootTag() == r3.first.GetRootTag()) +
                   (r2.first.GetRootTag() == r3.first.GetRootTag());
-  return prob_r12 + counts[tag].log_prob(r3, same_rules, same_tags,
-                                         ComputeLogBaseProbability(r3));
+  return prob_r12 + counts.GetLogProbability(
+      r3, same_rules, same_tags, ComputeLogBaseProbability(r3));
 }
 
 void Sampler::IncrementRuleCount(const Rule& rule) {
