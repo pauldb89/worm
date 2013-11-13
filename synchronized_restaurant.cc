@@ -1,5 +1,7 @@
 #include "synchronized_restaurant.h"
 
+#include <omp.h>
+
 #include "aligned_tree.h"
 
 SynchronizedRuleCounts::SynchronizedRuleCounts(double alpha) :

@@ -27,7 +27,8 @@ class Sampler {
           RandomGenerator& generator, bool enable_all_stats, double alpha,
           double pexpand, double pchild, double pterm);
 
-  void Sample(const string& output_prefix, int iterations, int log_frequency);
+  void Sample(const string& output_prefix, int iterations,
+              int num_threads, int log_frequency);
 
   void SerializeAlignments(const string& output_prefix);
 

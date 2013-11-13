@@ -1,12 +1,15 @@
 #include "translation_table.h"
 
+#include <omp.h>
+
 #include "dictionary.h"
 
 const double TranslationTable::DEFAULT_NULL_PROB = 1e-50;
 
 TranslationTable::TranslationTable(
     ifstream& fin, Dictionary& source_vocabulary,
-    Dictionary& target_vocabulary, Dictionary& dict) {
+    Dictionary& target_vocabulary, Dictionary& dict, int max_threads) :
+    cache(max_threads) {
   double prob;
   int source_id, target_id;
   while (fin >> source_id >> target_id >> prob) {
@@ -16,25 +19,30 @@ TranslationTable::TranslationTable(
   }
 }
 
-void TranslationTable::CacheSentence(const vector<int>& source_words,
-                                     const vector<int>& target_words) {
-  cache = vector<vector<double>>(target_words.size());
+void TranslationTable::CacheSentence(
+    const vector<int>& source_words,
+    const vector<int>& target_words,
+    int thread_id) {
+  cache[thread_id] = vector<vector<double>>(target_words.size());
   for (size_t i = 0; i < target_words.size(); ++i) {
-    cache[i].resize(source_words.size() + 1);
+    cache[thread_id][i].resize(source_words.size() + 1);
     for (size_t j = 0; j < source_words.size(); ++j) {
-      cache[i][j] = GetProbability(source_words[j], target_words[i]);
+      cache[thread_id][i][j] = GetProbability(source_words[j], target_words[i]);
     }
-    cache[i].back() = GetProbability(Dictionary::NULL_WORD_ID, target_words[i]);
+    cache[thread_id][i].back() =
+        GetProbability(Dictionary::NULL_WORD_ID, target_words[i]);
   }
 }
 
 double TranslationTable::ComputeAverageLogProbability(
-    const vector<int>& source_indexes, const vector<int>& target_indexes) {
+    const vector<int>& source_indexes,
+    const vector<int>& target_indexes,
+    int thread_id) {
   double result = 0;
   for (auto target_index: target_indexes) {
-    double sum = cache[target_index].back();
+    double sum = cache[thread_id][target_index].back();
     for (auto source_index: source_indexes) {
-      sum += cache[target_index][source_index];
+      sum += cache[thread_id][target_index][source_index];
     }
     result += log(sum / (source_indexes.size() + 1));
   }
