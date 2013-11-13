@@ -1,5 +1,7 @@
 #include "translation_table.h"
 
+#include <omp.h>
+
 #include "dictionary.h"
 
 const double TranslationTable::DEFAULT_NULL_PROB = 1e-50;
