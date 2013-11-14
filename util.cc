@@ -212,18 +212,28 @@ void WriteTargetString(ostream& out,
 
 void WriteSCFGRule(ostream& out, const Rule& rule, Dictionary& dictionary) {
   const AlignedTree& tree = rule.first;
-  out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
+  // out << dictionary.GetToken(tree.GetRootTag()) << " ||| ";
 
+  vector<string> tags;
   for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
     if (leaf->IsSetWord() && (leaf == tree.begin() || !leaf->IsSplitNode())) {
       out << dictionary.GetToken(leaf->GetWord()) << " ";
     } else {
+      tags.push_back(dictionary.GetToken(leaf->GetTag()));
       out << dictionary.GetToken(leaf->GetTag()) << " ";
     }
   }
   out << "||| ";
 
-  WriteTargetString(out, rule.second, dictionary);
+  for (auto node: rule.second) {
+    if (node.IsSetWord()) {
+      out << dictionary.GetToken(node.GetWord()) << " ";
+    } else {
+      out << tags[node.GetVarIndex()] << " ";
+    }
+  }
+
+  // WriteTargetString(out, rule.second, dictionary);
 }
 
 void WriteSTSGRule(ostream& out, const Rule& rule, Dictionary& dictionary) {

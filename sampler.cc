@@ -740,7 +740,8 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
     }
   }
 
-  ofstream gout(output_prefix + ".grammar");
+  ofstream stsg_out(output_prefix + ".grammar");
+  ofstream scfg_out(output_prefix + ".scfg");
   ofstream fwd_out(output_prefix + ".fwd");
   ofstream rev_out(output_prefix + ".rev");
   for (auto entry: rule_counts) {
@@ -755,12 +756,13 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
 
     sort(rules.begin(), rules.end(), greater<pair<int, Rule>>());
     for (auto rule: rules) {
-      if (scfg_format) {
-        WriteSCFGRule(gout, rule.second, dictionary);
-      } else {
-        WriteSTSGRule(gout, rule.second, dictionary);
+      WriteSTSGRule(stsg_out, rule.second, dictionary);
+      stsg_out << "||| " << rule.first / root_total_count << "\n";
+
+      for (int i = 0; i < rule.first; ++i) {
+        WriteSCFGRule(scfg_out, rule.second, dictionary);
+        scfg_out << "\n";
       }
-      gout << "||| " << rule.first / root_total_count << "\n";
 
       auto alignments = ConstructAlignments(rule.second);
       fwd_out << alignments.first << "\n";
