@@ -24,6 +24,8 @@ class Grammar {
   Grammar(ifstream& grammar_stream, Dictionary& dictionary,
           double penalty, int max_leaves, int max_tree_size);
 
+  void Filter(double threshold);
+
   vector<pair<Rule, double>> GetRules(int tag);
 
   void UpdateRuleStats(const Rule& rule);

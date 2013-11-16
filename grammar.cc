@@ -43,6 +43,18 @@ Grammar::Grammar(ifstream& grammar_stream, Dictionary& dictionary,
   }
 }
 
+void Grammar::Filter(double threshold) {
+  for (auto& entry: rules) {
+    vector<pair<Rule, double>> remaining_rules;
+    for (const auto& rule: entry.second) {
+      if (rule.second >= threshold) {
+        remaining_rules.push_back(rule);
+      }
+    }
+    entry.second = remaining_rules;
+  }
+}
+
 void Grammar::RemoveMixedLinks(const Rule& rule, Alignment& alignment) {
   const AlignedTree& tree = rule.first;
   unordered_set<int> source_var_indexes;
