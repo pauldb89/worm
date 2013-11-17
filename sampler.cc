@@ -721,6 +721,7 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
 
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   unordered_map<int, map<Rule, int>> rule_counts;
+  unordered_map<int, map<Rule, double>> rule_probs;
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
 
@@ -734,6 +735,7 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);
         ++rule_counts[node->GetTag()][rule];
+        rule_probs[node->GetTag()][rule] = exp(ComputeLogProbability(rule));
       }
     }
   }
@@ -741,24 +743,35 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   ofstream gout(output_prefix + ".grammar");
   ofstream fwd_out(output_prefix + ".fwd");
   ofstream rev_out(output_prefix + ".rev");
-  for (auto entry: rule_counts) {
-    vector<pair<int, Rule>> rules;
-    double root_total_count = 0;
-    for (auto rule_entry: entry.second) {
+  for (const auto& entry: rule_counts) {
+    double total_rule_count = 0;
+    for (const auto& rule_entry: entry.second) {
       if (rule_entry.second >= min_rule_count) {
-        root_total_count += rule_entry.second;
-        rules.push_back(make_pair(rule_entry.second, rule_entry.first));
+        total_rule_count += rule_entry.second;
       }
     }
 
-    sort(rules.begin(), rules.end(), greater<pair<int, Rule>>());
+    vector<pair<double, Rule>> rules;
+    for (const auto& rule_entry: entry.second) {
+      if (rule_entry.second >= min_rule_count) {
+        double rule_prob = 0;
+        if (min_rule_count == 0) {
+          rule_prob = rule_probs[entry.first][rule_entry.first];
+        } else {
+          rule_prob = rule_entry.second / total_rule_count;
+        }
+        rules.push_back(make_pair(rule_prob, rule_entry.first));
+      }
+    }
+
+    sort(rules.begin(), rules.end(), greater<pair<double, Rule>>());
     for (auto rule: rules) {
       if (scfg_format) {
         WriteSCFGRule(gout, rule.second, dictionary);
       } else {
         WriteSTSGRule(gout, rule.second, dictionary);
       }
-      gout << "||| " << rule.first / root_total_count << "\n";
+      gout << "||| " << rule.first << "\n";
 
       auto alignments = ConstructAlignments(rule.second);
       fwd_out << alignments.first << "\n";
