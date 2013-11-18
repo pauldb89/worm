@@ -23,6 +23,10 @@ class Grammar {
 
   void Filter(const AlignedTree& tree);
 
+  bool MatchRule(
+      const AlignedTree& tree, const NodeIter& tree_node,
+      const AlignedTree& frag, const NodeIter& frag_node);
+
   vector<pair<Rule, double>> GetRules(int tag);
 
  private:

@@ -154,11 +154,6 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
 }
 
 void Grammar::Filter(const AlignedTree& tree) {
-  unordered_set<int> words;
-  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
-    words.insert(leaf->GetWord());
-  }
-
   unordered_set<int> tags;
   for (const auto& node: tree) {
     tags.insert(node.GetTag());
@@ -167,14 +162,16 @@ void Grammar::Filter(const AlignedTree& tree) {
   for (int tag: tags) {
     vector<pair<Rule, double>> remaining_rules;
     for (const auto& rule: rules[tag]) {
-      const auto& frag = rule.first.first;
-      bool appliable = true;
-      for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-        if (!leaf->IsSplitNode() || leaf == frag.begin()) {
-          if (!words.count(leaf->GetWord())) {
-            appliable = false;
-            break;
-          }
+      bool appliable = false;
+      for (auto node = tree.begin(); node != tree.end(); ++node) {
+        if (node->GetTag() != tag) {
+          continue;
+        }
+
+        const AlignedTree& frag = rule.first.first;
+        if (MatchRule(tree, node, frag, frag.begin())) {
+          appliable = true;
+          break;
         }
       }
 
@@ -182,9 +179,38 @@ void Grammar::Filter(const AlignedTree& tree) {
         remaining_rules.push_back(rule);
       }
     }
-
     rules[tag] = remaining_rules;
   }
+}
+
+bool Grammar::MatchRule(
+    const AlignedTree& tree, const NodeIter& tree_node,
+    const AlignedTree& frag, const NodeIter& frag_node) {
+  if (tree_node->GetTag() != frag_node->GetTag()) {
+    return false;
+  }
+
+  if (frag_node.number_of_children() == 0) {
+    if (!frag_node->IsSetWord()) {
+      return true;
+    }
+    return frag_node->GetWord() == tree_node->GetWord();
+  }
+
+  if (tree_node.number_of_children() != frag_node.number_of_children()) {
+    return false;
+  }
+
+  auto tree_child = tree.begin(tree_node), frag_child = frag.begin(frag_node);
+  while (tree_child != tree.end(tree_node) &&
+         frag_child != frag.end(frag_node)) {
+    if (!MatchRule(tree, tree_child, frag, frag_child)) {
+      return false;
+    }
+    ++tree_child, ++frag_child;
+  }
+
+  return true;
 }
 
 vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
