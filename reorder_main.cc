@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
           "If not set, a max-derivation reorderer will be used instead.")
       ("threshold", po::value<double>()->default_value(0)->required(),
           "Minimum probabilty for reodering rules")
-      ("seed", po::value<int>()->default_value(0),
+      ("seed", po::value<unsigned int>()->default_value(0),
           "Seed for random generator. Set to 0 if seed should be random.")
       ("penalty", po::value<double>()->default_value(0.1)->required(),
           "Displacement penalty for reordering")

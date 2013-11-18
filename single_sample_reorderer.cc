@@ -9,11 +9,15 @@ SingleSampleReorderer::SingleSampleReorderer(
     uniform_distribution(0, 1) {}
 
 void SingleSampleReorderer::Combine(double& cache_prob, double match_prob) {
-  cache_prob += match_prob;
+  cache_prob = Log<double>::add(cache_prob, match_prob);
 }
 
 shared_ptr<Rule> SingleSampleReorderer::SelectRule(
     const vector<pair<Rule, double>>& candidates) {
+  if (candidates.size() == 0) {
+    return nullptr;
+  }
+
   double total_prob = Log<double>::zero();
   for (auto rule: candidates) {
     total_prob = Log<double>::add(total_prob, rule.second);
@@ -27,5 +31,6 @@ shared_ptr<Rule> SingleSampleReorderer::SelectRule(
     r = Log<double>::subtract(r, rule.second);
   }
 
+  assert(false);
   return nullptr;
 }
