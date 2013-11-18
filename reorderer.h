@@ -2,50 +2,55 @@
 #define _REORDERER_H_
 
 #include <map>
-#include <memory>
 
+#include "grammar.h"
 #include "reorderer_base.h"
 
 using namespace std;
 
-class Grammar;
-
 typedef AlignedTree::iterator NodeIter;
 typedef map<NodeIter, double> Cache;
 
+class RuleStatsReporter;
+
 class Reorderer : public ReordererBase {
  public:
-  Reorderer(shared_ptr<Grammar> grammar);
+  Reorderer(
+      const AlignedTree& tree,
+      const Grammar& grammar,
+      shared_ptr<RuleStatsReporter> reporter);
 
-  String Reorder(const AlignedTree& tree);
+  String Reorder();
 
  private:
-  Cache ConstructProbabilityCache(const AlignedTree& tree);
+  Cache ConstructProbabilityCache();
 
   virtual void Combine(double& cache_prob, double match_prob) = 0;
 
-  String ConstructReordering(const Cache& cache, const AlignedTree& tree);
+  String ConstructReordering(const Cache& cache);
 
-  String ConstructReordering(const Cache& cache, const AlignedTree& tree,
-                             const NodeIter& tree_node);
+  String ConstructReordering(const Cache& cache, const NodeIter& tree_node);
 
-  double GetMatchProb(const Cache& cache, const AlignedTree& tree,
-                      const NodeIter& tree_node, const AlignedTree& frag,
-                      const NodeIter& frag_node);
-
-  vector<NodeIter> GetFrontierVariables(
-      const AlignedTree& tree, const NodeIter& tree_node,
+  double GetMatchProb(
+      const Cache& cache, const NodeIter& tree_node,
       const AlignedTree& frag, const NodeIter& frag_node);
 
-  shared_ptr<Rule> SelectRule(const Cache& cache, const AlignedTree& tree,
-                              const NodeIter& node);
+  vector<NodeIter> GetFrontierVariables(
+      const NodeIter& tree_node, const AlignedTree& frag,
+      const NodeIter& frag_node);
 
-  virtual shared_ptr<Rule> SelectRule(
+  shared_ptr<pair<Rule, double>> SelectRule(
+      const Cache& cache, const NodeIter& node);
+
+  virtual shared_ptr<pair<Rule, double>> SelectRule(
       const vector<pair<Rule, double>>& candidates) = 0;
 
   static const double FAIL;
   static const double STOP;
-  shared_ptr<Grammar> grammar;
+
+  AlignedTree tree;
+  Grammar grammar;
+  shared_ptr<RuleStatsReporter> reporter;
 };
 
 #endif

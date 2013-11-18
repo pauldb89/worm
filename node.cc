@@ -3,11 +3,11 @@
 AlignedNode::AlignedNode() :
     tag(-1), word(-1), word_index(-1), start(-1), end(-1), split_node(false) {}
 
-bool AlignedNode::IsSetTag() {
+bool AlignedNode::IsSetTag() const {
   return tag != -1;
 }
 
-int AlignedNode::GetTag() {
+int AlignedNode::GetTag() const {
   return tag;
 }
 
@@ -15,11 +15,11 @@ void AlignedNode::SetTag(int value) {
   tag = value;
 }
 
-bool AlignedNode::IsSetWord() {
+bool AlignedNode::IsSetWord() const {
   return word != -1;
 }
 
-int AlignedNode::GetWord() {
+int AlignedNode::GetWord() const {
   return word;
 }
 
@@ -31,7 +31,7 @@ void AlignedNode::UnsetWord() {
   word = word_index = -1;
 }
 
-int AlignedNode::GetWordIndex() {
+int AlignedNode::GetWordIndex() const {
   return word_index;
 }
 
@@ -39,7 +39,7 @@ void AlignedNode::SetWordIndex(int value) {
   word_index = value;
 }
 
-bool AlignedNode::IsSplitNode() {
+bool AlignedNode::IsSplitNode() const {
   return split_node;
 }
 
@@ -47,7 +47,7 @@ void AlignedNode::SetSplitNode(bool value) {
   split_node = value;
 }
 
-pair<int, int> AlignedNode::GetSpan() {
+pair<int, int> AlignedNode::GetSpan() const {
   return make_pair(start, end);
 }
 

@@ -3,8 +3,11 @@
 #include "log_add.h"
 
 SingleSampleReorderer::SingleSampleReorderer(
-    shared_ptr<Grammar> grammar, RandomGenerator& generator) :
-    Reorderer(grammar),
+    const AlignedTree& tree,
+    const Grammar& grammar,
+    shared_ptr<RuleStatsReporter> reporter,
+    RandomGenerator& generator) :
+    Reorderer(tree, grammar, reporter),
     generator(generator),
     uniform_distribution(0, 1) {}
 
@@ -12,7 +15,7 @@ void SingleSampleReorderer::Combine(double& cache_prob, double match_prob) {
   cache_prob = Log<double>::add(cache_prob, match_prob);
 }
 
-shared_ptr<Rule> SingleSampleReorderer::SelectRule(
+shared_ptr<pair<Rule, double>> SingleSampleReorderer::SelectRule(
     const vector<pair<Rule, double>>& candidates) {
   if (candidates.size() == 0) {
     return nullptr;
@@ -26,7 +29,7 @@ shared_ptr<Rule> SingleSampleReorderer::SelectRule(
   double r = log(uniform_distribution(generator)) + total_prob;
   for (auto rule: candidates) {
     if (rule.second >= r) {
-      return make_shared<Rule>(rule.first);
+      return make_shared<pair<Rule, double>>(rule);
     }
     r = Log<double>::subtract(r, rule.second);
   }

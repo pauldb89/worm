@@ -3,16 +3,18 @@
 #include "grammar.h"
 
 MultiSampleReorderer::MultiSampleReorderer(
-    shared_ptr<Grammar> grammar,
+    const AlignedTree& tree,
+    const Grammar& grammar,
+    shared_ptr<RuleStatsReporter> reporter,
     RandomGenerator& generator,
     unsigned int num_iterations) :
-    reorderer(grammar, generator),
+    reorderer(tree, grammar, reporter, generator),
     num_iterations(num_iterations) {}
 
-String MultiSampleReorderer::Reorder(const AlignedTree& tree) {
+String MultiSampleReorderer::Reorder() {
   map<String, int> reordering_counts;
   for (unsigned int i = 0; i < num_iterations; ++i) {
-    ++reordering_counts[reorderer.Reorder(tree)];
+    ++reordering_counts[reorderer.Reorder()];
   }
 
   String result;

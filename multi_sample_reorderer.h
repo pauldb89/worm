@@ -8,11 +8,14 @@ class Grammar;
 
 class MultiSampleReorderer: public ReordererBase {
  public:
-  MultiSampleReorderer(shared_ptr<Grammar> grammar,
-                       RandomGenerator& generator,
-                       unsigned int num_iterations);
+  MultiSampleReorderer(
+      const AlignedTree& tree,
+      const Grammar& grammar,
+      shared_ptr<RuleStatsReporter> reporter,
+      RandomGenerator& generator,
+      unsigned int num_iterations);
 
-  String Reorder(const AlignedTree& tree);
+  String Reorder();
 
  private:
   SingleSampleReorderer reorderer;

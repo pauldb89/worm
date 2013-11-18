@@ -9,29 +9,29 @@ class AlignedNode {
  public:
   AlignedNode();
 
-  bool IsSetTag();
+  bool IsSetTag() const;
 
-  int GetTag();
+  int GetTag() const;
 
   void SetTag(int value);
 
-  bool IsSetWord();
+  bool IsSetWord() const;
 
-  int GetWord();
+  int GetWord() const;
 
   void SetWord(int value);
 
   void UnsetWord();
 
-  int GetWordIndex();
+  int GetWordIndex() const;
 
   void SetWordIndex(int value);
 
-  bool IsSplitNode();
+  bool IsSplitNode() const;
 
   void SetSplitNode(bool value);
 
-  pair<int, int> GetSpan();
+  pair<int, int> GetSpan() const;
 
   void SetSpan(const pair<int, int>& span);
 

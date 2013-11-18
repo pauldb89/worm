@@ -8,9 +8,10 @@
 #include "dictionary.h"
 
 Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
-                 Dictionary& dictionary, double penalty,
+                 Dictionary& dictionary, double penalty, double threshold,
                  int max_leaves, int max_tree_size) :
     penalty(penalty), max_leaves(max_leaves), max_tree_size(max_tree_size) {
+  map<Rule, double> reordering_probs;
   while (!grammar_stream.eof()) {
     pair<Rule, double> entry = ReadRule(grammar_stream, dictionary);
     Alignment alignment;
@@ -28,32 +29,12 @@ Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
   }
 
   for (auto rule: reordering_probs) {
-    rules[rule.first.first.GetRootTag()].push_back(rule);
-  }
-}
-
-Grammar::Grammar(ifstream& grammar_stream, Dictionary& dictionary,
-                 double penalty, int max_leaves, int max_tree_size) :
-    penalty(penalty), max_leaves(max_leaves), max_tree_size(max_tree_size) {
-  while (!grammar_stream.eof()) {
-    pair<Rule, double> rule = ReadRule(grammar_stream, dictionary);
-    reordering_probs[rule.first] = rule.second;
-    rules[rule.first.first.GetRootTag()].push_back(rule);
-    grammar_stream >> ws;
-  }
-}
-
-void Grammar::Filter(double threshold) {
-  for (auto& entry: rules) {
-    vector<pair<Rule, double>> remaining_rules;
-    for (const auto& rule: entry.second) {
-      if (rule.second >= threshold) {
-        remaining_rules.push_back(rule);
-      }
+    if (rule.second >= threshold) {
+      rules[rule.first.first.GetRootTag()].push_back(rule);
     }
-    entry.second = remaining_rules;
   }
 }
+
 
 void Grammar::RemoveMixedLinks(const Rule& rule, Alignment& alignment) {
   const AlignedTree& tree = rule.first;
@@ -172,60 +153,43 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
   return reordering;
 }
 
+void Grammar::Filter(const AlignedTree& tree) {
+  unordered_set<int> words;
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    words.insert(leaf->GetWord());
+  }
+
+  unordered_set<int> tags;
+  for (const auto& node: tree) {
+    tags.insert(node.GetTag());
+  }
+
+  for (int tag: tags) {
+    vector<pair<Rule, double>> remaining_rules;
+    for (const auto& rule: rules[tag]) {
+      const auto& frag = rule.first.first;
+      bool appliable = true;
+      for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+        if (!leaf->IsSplitNode() || leaf == frag.begin()) {
+          if (!words.count(leaf->GetWord())) {
+            appliable = false;
+            break;
+          }
+        }
+      }
+
+      if (appliable) {
+        remaining_rules.push_back(rule);
+      }
+    }
+
+    rules[tag] = remaining_rules;
+  }
+}
+
 vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
   if (!rules.count(root_tag)) {
     return vector<pair<Rule, double>>();
   }
   return rules[root_tag];
-}
-
-void Grammar::UpdateRuleStats(const Rule& rule) {
-  if (IsReorderingRule(rule)) {
-    #pragma omp critical
-    {
-      ++rule_counts[rule];
-    }
-  }
-}
-
-void Grammar::DisplayRuleStats(ostream& stream, Dictionary& dictionary,
-                               int num_sentences) {
-  vector<pair<int, Rule>> top_rules;
-  for (auto rule: rule_counts) {
-    top_rules.push_back(make_pair(rule.second, rule.first));
-  }
-
-  sort(top_rules.begin(), top_rules.end(), greater<pair<int, Rule>>());
-
-  for (auto rule: top_rules) {
-    WriteSTSGRule(stream, rule.second, dictionary);
-    stream << " ||| " << reordering_probs[rule.second] << " ||| "
-           << rule.first << endl;
-  }
-}
-
-bool Grammar::IsReorderingRule(const Rule& rule) {
-  const AlignedTree& tree = rule.first;
-  const String& reordering = rule.second;
-  int target_index = 0, var_index = 0;
-  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
-    if (leaf->IsSetWord() ^ reordering[target_index].IsSetWord()) {
-      return true;
-    }
-
-    if (leaf->IsSetWord() && reordering[target_index].IsSetWord() &&
-        leaf->GetWord() != reordering[target_index].GetWord()) {
-      return true;
-    }
-
-    if (!leaf->IsSetWord() && !reordering[target_index].IsSetWord() &&
-        var_index != reordering[target_index].GetVarIndex()) {
-      return true;
-    }
-
-    var_index += !leaf->IsSetWord();
-    ++target_index;
-  }
-
-  return false;
 }

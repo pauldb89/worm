@@ -6,7 +6,7 @@
 
 class ReordererBase {
  public:
-  virtual String Reorder(const AlignedTree& tree) = 0;
+  virtual String Reorder() = 0;
 };
 
 #endif

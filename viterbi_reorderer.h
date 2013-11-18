@@ -7,12 +7,16 @@ using namespace std;
 
 class ViterbiReorderer: public Reorderer {
  public:
-  ViterbiReorderer(shared_ptr<Grammar> grammar);
+  ViterbiReorderer(
+      const AlignedTree& tree,
+      const Grammar& grammar,
+      shared_ptr<RuleStatsReporter> reporter);
 
  private:
   void Combine(double& cache_prob, double match_prob);
 
-  shared_ptr<Rule> SelectRule(const vector<pair<Rule, double>>& candidates);
+  shared_ptr<pair<Rule, double>> SelectRule(
+      const vector<pair<Rule, double>>& candidates);
 };
 
 #endif

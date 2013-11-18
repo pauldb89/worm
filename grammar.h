@@ -18,20 +18,12 @@ class Dictionary;
 class Grammar {
  public:
   Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
-          Dictionary& dictionary, double penalty,
+          Dictionary& dictionary, double penalty, double threshold,
           int max_leaves, int max_tree_size);
 
-  Grammar(ifstream& grammar_stream, Dictionary& dictionary,
-          double penalty, int max_leaves, int max_tree_size);
-
-  void Filter(double threshold);
+  void Filter(const AlignedTree& tree);
 
   vector<pair<Rule, double>> GetRules(int tag);
-
-  void UpdateRuleStats(const Rule& rule);
-
-  void DisplayRuleStats(ostream& stream, Dictionary& dictionary,
-                        int num_sentences);
 
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the
@@ -44,14 +36,9 @@ class Grammar {
   String ConstructReordering(const vector<NodeIter>& source_items,
                              const vector<int>& permutation);
 
-  // Checks if the STSG rule actually implies any kind of reordering.
-  bool IsReorderingRule(const Rule& rule);
-
   double penalty;
   int max_leaves, max_tree_size;
   unordered_map<int, vector<pair<Rule, double>>> rules;
-  map<Rule, double> reordering_probs;
-  map<Rule, int> rule_counts;
 };
 
 #endif

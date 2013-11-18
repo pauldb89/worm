@@ -8,6 +8,7 @@
 #include "dictionary.h"
 #include "grammar.h"
 #include "multi_sample_reorderer.h"
+#include "rule_stats_reporter.h"
 #include "viterbi_reorderer.h"
 
 using namespace std;
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
   po::options_description general_options("General options");
   general_options.add_options()
       ("grammar,g", po::value<string>()->required(), "Path to grammar file")
-      ("alignment,a", po::value<string>(),
+      ("alignment,a", po::value<string>()->required(),
           "Path to file containing rule alignments")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads for reordering")
@@ -66,22 +67,11 @@ int main(int argc, char** argv) {
 
   cerr << "Constructing reordering grammar..." << endl;
   Dictionary dictionary;
-  shared_ptr<Grammar> grammar;
   ifstream grammar_stream(vm["grammar"].as<string>());
-  if (vm.count("alignment")) {
-    ifstream alignment_stream(vm["alignment"].as<string>());
-    grammar = make_shared<Grammar>(grammar_stream, alignment_stream, dictionary,
-        vm["penalty"].as<double>(), vm["max_leaves"].as<int>(),
-        vm["max_tree_size"].as<int>());
-  } else {
-    grammar = make_shared<Grammar>(grammar_stream, dictionary,
-        vm["penalty"].as<double>(), vm["max_leaves"].as<int>(),
-        vm["max_tree_size"].as<int>());
-  }
-  cerr << "Done..." << endl;
-
-  cerr << "Filtering grammar rules..." << endl;
-  grammar->Filter(vm["threshold"].as<double>());
+  ifstream alignment_stream(vm["alignment"].as<string>());
+  Grammar grammar(grammar_stream, alignment_stream, dictionary,
+      vm["penalty"].as<double>(), vm["threshold"].as<double>(),
+      vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Reading training data..." << endl;
@@ -105,6 +95,7 @@ int main(int argc, char** argv) {
 
   int sentence_index = 0;
   Clock::time_point start_time = Clock::now();
+  shared_ptr<RuleStatsReporter> reporter = make_shared<RuleStatsReporter>();
   vector<String> reorderings(input_trees.size());
   int num_threads = vm["threads"].as<int>();
   cerr << "Reordering will use " << num_threads << " threads." << endl;
@@ -117,16 +108,18 @@ int main(int argc, char** argv) {
         seed = time(NULL);
       }
       RandomGenerator generator(seed);
-      reorderer = make_shared<MultiSampleReorderer>(grammar, generator, num_iterations);
+      reorderer = make_shared<MultiSampleReorderer>(
+          input_trees[i], grammar, reporter, generator, num_iterations);
     } else {
-      reorderer = make_shared<ViterbiReorderer>(grammar);
+      reorderer = make_shared<ViterbiReorderer>(
+          input_trees[i], grammar, reporter);
     }
 
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
-      reorderings[i] = reorderer->Reorder(input_trees[i]);
+      reorderings[i] = reorderer->Reorder();
     }
 
     #pragma omp critical
@@ -155,7 +148,7 @@ int main(int argc, char** argv) {
   if (vm.count("stats_file")) {
     cerr << "Writing grammar statistics..." << endl;
     ofstream stats_stream(vm["stats_file"].as<string>());
-    grammar->DisplayRuleStats(stats_stream, dictionary, reorderings.size());
+    reporter->DisplayRuleStats(stats_stream, dictionary);
     cerr << "Done..." << endl;
   }
 
