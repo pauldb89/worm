@@ -77,7 +77,7 @@ String Grammar::FindBestReordering(const AlignedTree& tree,
     for (int i = 0; i < source_size; ++i) {
       permutation.push_back(i);
     }
-    return ConstructReordering(source_items, permutation);
+    return ConstructRuleReordering(source_items, permutation);
   }
 
   unordered_map<int, vector<int>> forward_links;
@@ -130,11 +130,11 @@ String Grammar::FindBestReordering(const AlignedTree& tree,
     state ^= 1 << last_bit[state];
   }
 
-  return ConstructReordering(source_items, permutation);
+  return ConstructRuleReordering(source_items, permutation);
 }
 
-String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
-                                    const vector<int>& permutation) {
+String Grammar::ConstructRuleReordering(const vector<NodeIter>& source_items,
+                                        const vector<int>& permutation) {
   String reordering;
   int word_index = 0;
   for (auto index: permutation) {
@@ -154,69 +154,9 @@ String Grammar::ConstructReordering(const vector<NodeIter>& source_items,
   return reordering;
 }
 
-void Grammar::Filter(const AlignedTree& tree) {
-  unordered_set<int> tags;
-  for (const auto& node: tree) {
-    tags.insert(node.GetTag());
-  }
-
-  for (int tag: tags) {
-    vector<pair<Rule, double>> remaining_rules;
-    for (const auto& rule: rules[tag]) {
-      bool appliable = false;
-      for (auto node = tree.begin(); node != tree.end(); ++node) {
-        if (node->GetTag() != tag) {
-          continue;
-        }
-
-        const AlignedTree& frag = rule.first.first;
-        if (MatchRule(tree, node, frag, frag.begin())) {
-          appliable = true;
-          break;
-        }
-      }
-
-      if (appliable) {
-        remaining_rules.push_back(rule);
-      }
-    }
-    rules[tag] = remaining_rules;
-  }
-}
-
-bool Grammar::MatchRule(
-    const AlignedTree& tree, const NodeIter& tree_node,
-    const AlignedTree& frag, const NodeIter& frag_node) {
-  if (tree_node->GetTag() != frag_node->GetTag()) {
-    return false;
-  }
-
-  if (frag_node.number_of_children() == 0) {
-    if (!frag_node->IsSetWord()) {
-      return true;
-    }
-    return frag_node->GetWord() == tree_node->GetWord();
-  }
-
-  if (tree_node.number_of_children() != frag_node.number_of_children()) {
-    return false;
-  }
-
-  auto tree_child = tree.begin(tree_node), frag_child = frag.begin(frag_node);
-  while (tree_child != tree.end(tree_node) &&
-         frag_child != frag.end(frag_node)) {
-    if (!MatchRule(tree, tree_child, frag, frag_child)) {
-      return false;
-    }
-    ++tree_child, ++frag_child;
-  }
-
-  return true;
-}
-
-vector<pair<Rule, double>> Grammar::GetRules(int root_tag) {
+vector<pair<Rule, double>> Grammar::GetRules(int root_tag) const {
   if (!rules.count(root_tag)) {
     return vector<pair<Rule, double>>();
   }
-  return rules[root_tag];
+  return rules.at(root_tag);
 }

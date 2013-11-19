@@ -16,7 +16,7 @@ target_link_libraries(sampler ${Boost_LIBRARIES})
 
 set(reorder_SRCS aligned_tree.cc dictionary.cc grammar.cc
     multi_sample_reorderer.cc node.cc reorder_main.cc reorderer.cc
-    rule_stats_reporter.cc single_sample_reorderer.cc util.cc
+    rule_matcher.cc rule_stats_reporter.cc single_sample_reorderer.cc util.cc
     viterbi_reorderer.cc)
 add_executable(reorder ${reorder_SRCS})
 target_link_libraries(reorder ${Boost_LIBRARIES})

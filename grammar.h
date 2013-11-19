@@ -21,13 +21,7 @@ class Grammar {
           Dictionary& dictionary, double penalty, double threshold,
           int max_leaves, int max_tree_size);
 
-  void Filter(const AlignedTree& tree);
-
-  bool MatchRule(
-      const AlignedTree& tree, const NodeIter& tree_node,
-      const AlignedTree& frag, const NodeIter& frag_node);
-
-  vector<pair<Rule, double>> GetRules(int tag);
+  vector<pair<Rule, double>> GetRules(int tag) const;
 
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the
@@ -37,8 +31,8 @@ class Grammar {
   String FindBestReordering(const AlignedTree& tree,
                             const Alignment& alignment);
 
-  String ConstructReordering(const vector<NodeIter>& source_items,
-                             const vector<int>& permutation);
+  String ConstructRuleReordering(const vector<NodeIter>& source_items,
+                                 const vector<int>& permutation);
 
   double penalty;
   int max_leaves, max_tree_size;

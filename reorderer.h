@@ -5,6 +5,7 @@
 
 #include "grammar.h"
 #include "reorderer_base.h"
+#include "rule_matcher.h"
 
 using namespace std;
 
@@ -30,16 +31,6 @@ class Reorderer : public ReordererBase {
  private:
   String ConstructReordering(const NodeIter& tree_node);
 
-  double GetMatchProb(
-      const NodeIter& tree_node,
-      const AlignedTree& frag,
-      const NodeIter& frag_node);
-
-  vector<NodeIter> GetFrontierVariables(
-      const NodeIter& tree_node,
-      const AlignedTree& frag,
-      const NodeIter& frag_node);
-
   shared_ptr<pair<Rule, double>> SelectRule(const NodeIter& node);
 
   virtual shared_ptr<pair<Rule, double>> SelectRule(
@@ -49,7 +40,7 @@ class Reorderer : public ReordererBase {
   static const double STOP;
 
   AlignedTree tree;
-  Grammar grammar;
+  RuleMatcher matcher;
   shared_ptr<RuleStatsReporter> reporter;
   Cache cache;
 };
