@@ -30,7 +30,8 @@ Grammar::Grammar(ifstream& grammar_stream, ifstream& alignment_stream,
 
   for (auto rule: reordering_probs) {
     if (rule.second >= threshold) {
-      rules[rule.first.first.GetRootTag()].push_back(rule);
+      rules[rule.first.first.GetRootTag()].push_back(
+          make_pair(rule.first, log(rule.second)));
     }
   }
 }

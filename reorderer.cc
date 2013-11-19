@@ -22,9 +22,8 @@ void Reorderer::ConstructProbabilityCache() {
     cache[node] = STOP * tree.size(node);
     for (pair<Rule, double> rule: grammar.GetRules(node->GetTag())) {
       const AlignedTree& frag = rule.first.first;
-      double rule_prob = log(rule.second);
       double match_prob = GetMatchProb(node, frag, frag.begin());
-      Combine(cache[node], match_prob + rule_prob);
+      Combine(cache[node], match_prob + rule.second);
     }
   }
 }
@@ -108,10 +107,9 @@ shared_ptr<pair<Rule, double>> Reorderer::SelectRule(const NodeIter& node) {
   vector<pair<Rule, double>> candidates;
   for (const auto& rule: grammar.GetRules(node->GetTag())) {
     const AlignedTree& frag = rule.first.first;
-    double rule_prob = log(rule.second);
     double match_prob = GetMatchProb(node, frag, frag.begin());
     if (match_prob != FAIL) {
-      candidates.push_back(make_pair(rule.first, match_prob + rule_prob));
+      candidates.push_back(make_pair(rule.first, match_prob + rule.second));
     }
   }
 
