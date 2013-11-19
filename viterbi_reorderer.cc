@@ -4,7 +4,9 @@ ViterbiReorderer::ViterbiReorderer(
     const AlignedTree& tree,
     const Grammar& grammar,
     shared_ptr<RuleStatsReporter> reporter) :
-    Reorderer(tree, grammar, reporter) {}
+    Reorderer(tree, grammar, reporter) {
+  ConstructProbabilityCache();
+}
 
 void ViterbiReorderer::Combine(double& cache_prob, double match_prob) {
   cache_prob = max(cache_prob, match_prob);

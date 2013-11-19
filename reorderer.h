@@ -20,27 +20,27 @@ class Reorderer : public ReordererBase {
       const Grammar& grammar,
       shared_ptr<RuleStatsReporter> reporter);
 
-  String Reorder();
+  String ConstructReordering();
 
- private:
-  Cache ConstructProbabilityCache();
+ protected:
+  void ConstructProbabilityCache();
 
   virtual void Combine(double& cache_prob, double match_prob) = 0;
 
-  String ConstructReordering(const Cache& cache);
-
-  String ConstructReordering(const Cache& cache, const NodeIter& tree_node);
+ private:
+  String ConstructReordering(const NodeIter& tree_node);
 
   double GetMatchProb(
-      const Cache& cache, const NodeIter& tree_node,
-      const AlignedTree& frag, const NodeIter& frag_node);
-
-  vector<NodeIter> GetFrontierVariables(
-      const NodeIter& tree_node, const AlignedTree& frag,
+      const NodeIter& tree_node,
+      const AlignedTree& frag,
       const NodeIter& frag_node);
 
-  shared_ptr<pair<Rule, double>> SelectRule(
-      const Cache& cache, const NodeIter& node);
+  vector<NodeIter> GetFrontierVariables(
+      const NodeIter& tree_node,
+      const AlignedTree& frag,
+      const NodeIter& frag_node);
+
+  shared_ptr<pair<Rule, double>> SelectRule(const NodeIter& node);
 
   virtual shared_ptr<pair<Rule, double>> SelectRule(
       const vector<pair<Rule, double>>& candidates) = 0;
@@ -51,6 +51,7 @@ class Reorderer : public ReordererBase {
   AlignedTree tree;
   Grammar grammar;
   shared_ptr<RuleStatsReporter> reporter;
+  Cache cache;
 };
 
 #endif

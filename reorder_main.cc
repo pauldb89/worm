@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
-      reorderings[i] = reorderer->Reorder();
+      reorderings[i] = reorderer->ConstructReordering();
     }
 
     #pragma omp critical

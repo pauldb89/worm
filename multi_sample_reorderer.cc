@@ -11,15 +11,15 @@ MultiSampleReorderer::MultiSampleReorderer(
     reorderer(tree, grammar, reporter, generator),
     num_iterations(num_iterations) {}
 
-String MultiSampleReorderer::Reorder() {
+String MultiSampleReorderer::ConstructReordering() {
   map<String, int> reordering_counts;
   for (unsigned int i = 0; i < num_iterations; ++i) {
-    ++reordering_counts[reorderer.Reorder()];
+    ++reordering_counts[reorderer.ConstructReordering()];
   }
 
   String result;
   int max_counts = 0;
-  for (auto reordering: reordering_counts) {
+  for (const auto& reordering: reordering_counts) {
     if (reordering.second > max_counts) {
       max_counts = reordering.second;
       result = reordering.first;

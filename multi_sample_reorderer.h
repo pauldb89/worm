@@ -15,7 +15,7 @@ class MultiSampleReorderer: public ReordererBase {
       RandomGenerator& generator,
       unsigned int num_iterations);
 
-  String Reorder();
+  String ConstructReordering();
 
  private:
   SingleSampleReorderer reorderer;

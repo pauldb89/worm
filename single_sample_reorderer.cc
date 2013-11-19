@@ -9,7 +9,9 @@ SingleSampleReorderer::SingleSampleReorderer(
     RandomGenerator& generator) :
     Reorderer(tree, grammar, reporter),
     generator(generator),
-    uniform_distribution(0, 1) {}
+    uniform_distribution(0, 1) {
+  ConstructProbabilityCache();
+}
 
 void SingleSampleReorderer::Combine(double& cache_prob, double match_prob) {
   cache_prob = Log<double>::add(cache_prob, match_prob);

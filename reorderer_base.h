@@ -6,7 +6,7 @@
 
 class ReordererBase {
  public:
-  virtual String Reorder() = 0;
+  virtual String ConstructReordering() = 0;
 };
 
 #endif
