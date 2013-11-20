@@ -7,13 +7,13 @@
 
 #include "aligned_tree.h"
 #include "dictionary.h"
+#include "rule_reorderer.h"
 #include "synchronized_restaurant.h"
 #include "util.h"
 
 using namespace std;
 
 typedef Restaurant<Rule> RuleCounts;
-typedef AlignedTree::iterator NodeIter;
 
 class PCFGTable;
 class TranslationTable;
@@ -25,7 +25,8 @@ class Sampler {
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& reverse_table,
           RandomGenerator& generator, bool enable_all_stats,
-          int min_rule_count, double alpha,
+          int min_rule_count, bool reorder, double penalty,
+          int max_leaves, int max_tree_size, double alpha,
           double pexpand, double pchild, double pterm);
 
   void Sample(const string& output_prefix, int iterations,
@@ -34,6 +35,8 @@ class Sampler {
   void SerializeAlignments(const string& output_prefix);
 
   void SerializeGrammar(const string& output_prefix, bool scfg_format);
+
+  void SerializeReorderings(const string& output_prefix);
 
  private:
   void InitializeRuleCounts();
@@ -83,8 +86,13 @@ class Sampler {
 
   pair<Alignment, Alignment> ConstructAlignments(const Rule& rule);
 
+  void InferReorderings(int num_threads);
+
+  void ExtractReordering(const Instance& instance,
+                         const NodeIter& node,
+                         String& reordering);
+
   shared_ptr<vector<Instance>> training;
-  vector<shared_ptr<Instance>> initial_order;
   SynchronizedRuleCounts counts;
 
   Dictionary& dictionary;
@@ -95,9 +103,12 @@ class Sampler {
   uniform_real_distribution<double> uniform_distribution;
 
   bool enable_all_stats;
-
   // Parameters for filtering the final rules.
   int min_rule_count;
+
+  bool reorder;
+  RuleReorderer rule_reorderer;
+  vector<map<String, int>> reorder_counts;
 
   double alpha;
   double prob_expand, prob_not_expand;

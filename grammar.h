@@ -7,11 +7,10 @@
 #include <vector>
 
 #include "aligned_tree.h"
+#include "rule_reorderer.h"
 #include "util.h"
 
 using namespace std;
-
-typedef AlignedTree::iterator NodeIter;
 
 class Dictionary;
 
@@ -34,8 +33,7 @@ class Grammar {
   String ConstructRuleReordering(const vector<NodeIter>& source_items,
                                  const vector<int>& permutation);
 
-  double penalty;
-  int max_leaves, max_tree_size;
+  RuleReorderer rule_reorderer;
   unordered_map<int, vector<pair<Rule, double>>> rules;
 };
 

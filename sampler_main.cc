@@ -34,8 +34,15 @@ int main(int argc, char **argv) {
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads to use for sampling")
       ("align", "Infer alignments instead of a STSG grammar")
+      ("reorder", "Infer reordering directly from sampled variables")
       ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
+      ("penalty", po::value<double>()->default_value(0.1)->required(),
+          "Displacement penalty for reordering")
+      ("max_leaves", po::value<int>()->default_value(5)->required(),
+          "Maximum number of leaves in rules used for inferring reorderings")
+      ("max_tree_size", po::value<int>()->default_value(8)->required(),
+          "Maximum size of a tree in rules used for inferring reorderings")
       ("min_rule_count", po::value<int>()->default_value(0)->required(),
                "Minimum count for a rule to be used for reordering")
       ("alpha", po::value<double>()->default_value(1.0)->required(),
@@ -135,20 +142,24 @@ int main(int argc, char **argv) {
   }
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
-                  reverse_table, generator, vm.count("stats"),
-                  vm["min_rule_count"].as<int>(), vm["alpha"].as<double>(),
-                  vm["pexpand"].as<double>(), vm["pchild"].as<double>(),
-                  vm["pterm"].as<double>());
+                  reverse_table, generator,
+                  vm.count("stats"), vm["min_rule_count"].as<int>(),
+                  vm.count("reorder"), vm["penalty"].as<double>(),
+                  vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>(),
+                  vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
+                  vm["pchild"].as<double>(), vm["pterm"].as<double>());
   string prefix = vm["output"].as<string>();
   sampler.Sample(prefix, vm["iterations"].as<int>(),
                  num_threads, vm["log_freq"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
+  sampler.SerializeGrammar(prefix, vm.count("scfg"));
   if (vm.count("align")) {
     sampler.SerializeAlignments(prefix);
-  } else {
-    sampler.SerializeGrammar(prefix, vm.count("scfg"));
+  }
+  if (vm.count("reorder")) {
+    sampler.SerializeReorderings(prefix);
   }
   cerr << "Done..." << endl;
 

@@ -11,8 +11,6 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 
-typedef AlignedTree::iterator NodeIter;
-
 Instance ReadInstance(istream& tree_stream,
                       istream& string_stream,
                       istream& alignment_stream,

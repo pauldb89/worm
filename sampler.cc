@@ -18,7 +18,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
                  RandomGenerator& generator, bool enable_all_stats,
-                 int min_rule_count, double alpha,
+                 int min_rule_count, bool reorder, double penalty,
+                 int max_leaves, int max_tree_size, double alpha,
                  double pexpand, double pchild, double pterm) :
     training(training),
     counts(alpha),
@@ -30,6 +31,9 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     uniform_distribution(0, 1),
     enable_all_stats(enable_all_stats),
     min_rule_count(min_rule_count),
+    reorder(reorder),
+    rule_reorderer(penalty, max_leaves, max_tree_size),
+    reorder_counts(training->size()),
     alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -37,10 +41,6 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     prob_cont_child(log(1 - pchild)),
     prob_stop_str(log(pterm)),
     prob_cont_str(log(1 - pterm)) {
-  for (auto instance: *training) {
-    initial_order.push_back(make_shared<Instance>(instance));
-  }
-
   set<int> non_terminals, source_terminals, target_terminals;
   for (auto instance: *training) {
     for (auto node: instance.first) {
@@ -78,10 +78,12 @@ void Sampler::Sample(const string& prefix, int iterations,
       cerr << "Done..." << endl;
     }
 
-    random_shuffle(training->begin(), training->end());
+    vector<int> schedule(training->size());
+    iota(schedule.begin(), schedule.end(), 0);
+    random_shuffle(schedule.begin(), schedule.end());
     #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
-    for (size_t i = 0; i < training->size(); ++i) {
-      Instance& instance = training->operator[](i);
+    for (size_t i = 0; i < schedule.size(); ++i) {
+      Instance& instance = (*training)[schedule[i]];
 
       // Ignore parse failures.
       if (instance.first.size() <= 1) {
@@ -90,6 +92,10 @@ void Sampler::Sample(const string& prefix, int iterations,
       CacheSentence(instance);
       SampleAlignments(instance);
       SampleSwaps(instance);
+    }
+
+    if (reorder) {
+      InferReorderings(num_threads);
     }
 
     Clock::time_point stop_time = Clock::now();
@@ -675,12 +681,32 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
   return make_pair(forward_alignment, reverse_alignment);
 }
 
+void Sampler::InferReorderings(int num_threads) {
+  cerr << "Inferring reorderings..." << endl;
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    const Instance& instance = (*training)[i];
+    const AlignedTree& tree = instance.first;
+
+    // Ignore parse failures.
+    if (tree.size() <= 1) {
+      continue;
+    }
+
+    CacheSentence(instance);
+    String reordering;
+    ExtractReordering(instance, tree.begin(), reordering);
+    ++reorder_counts[i][reordering];
+  }
+  cerr << "Done..." << endl;
+}
+
 void Sampler::SerializeAlignments(const string& output_prefix) {
   ofstream fwd_out(output_prefix + ".fwd_align");
   ofstream rev_out(output_prefix + ".rev_align");
 
-  for (auto instance: initial_order) {
-    const AlignedTree& tree = instance->first;
+  for (auto instance: *training) {
+    const AlignedTree& tree = instance.first;
 
     if (tree.size() <= 1) {
       fwd_out << "\n";
@@ -691,7 +717,7 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
     Alignment forward_alignment, reverse_alignment;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        const Rule& rule = GetRule(*instance, node);
+        const Rule& rule = GetRule(instance, node);
         const AlignedTree& frag = rule.first;
         const String& target_string = rule.second;
 
@@ -779,5 +805,46 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
       fwd_out << alignments.first << "\n";
       rev_out << alignments.second << "\n";
     }
+  }
+}
+
+void Sampler::ExtractReordering(
+    const Instance& instance, const NodeIter& node, String& reordering) {
+  const Rule& rule = GetRule(instance, node);
+  const auto& alignment = ConstructAlignments(rule).first;
+
+  const auto& frontier = instance.first.GetSplitDescendants(node);
+  const auto& reorder_frontier = rule_reorderer.Reorder(rule.first, alignment);
+  for (const auto& descendant: reorder_frontier) {
+    if (descendant.IsSetWord()) {
+      reordering.push_back(descendant);
+    } else {
+      ExtractReordering(instance, frontier[descendant.GetVarIndex()],
+                        reordering);
+    }
+  }
+}
+
+void Sampler::SerializeReorderings(const string& output_prefix) {
+  ofstream out(output_prefix + ".reorder");
+  ofstream dump_out(output_prefix + ".dump");
+
+  for (const auto& counts: reorder_counts) {
+    dump_out << counts.size() << "\n";
+
+    int max_counts = 0;
+    String best_reordering;
+    for (const auto& entry: counts) {
+      WriteTargetString(dump_out, entry.first, dictionary);
+      dump_out << "\n" << entry.second << "\n";
+
+      if (entry.second > max_counts) {
+        best_reordering = entry.first;
+        max_counts = entry.second;
+      }
+    }
+
+    WriteTargetString(out, best_reordering, dictionary);
+    out << "\n";
   }
 }

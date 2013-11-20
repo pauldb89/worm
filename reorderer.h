@@ -11,7 +11,6 @@
 using namespace std;
 using namespace chrono;
 
-typedef AlignedTree::iterator NodeIter;
 typedef map<NodeIter, double> Cache;
 typedef high_resolution_clock Clock;
 

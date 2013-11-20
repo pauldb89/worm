@@ -20,8 +20,6 @@ class AlignedTree: public tree<AlignedNode> {
 
   vector<iterator> GetSplitDescendants(const iterator& root) const;
 
-  void DisplayTree(Dictionary& dictionary) const;
-
   void Write(ostream& out, Dictionary& dictionary) const;
 
   bool operator<(const AlignedTree& tree) const;
@@ -37,7 +35,8 @@ class AlignedTree: public tree<AlignedNode> {
              Dictionary& dictionary, int& var_index) const;
 };
 
-bool operator<(const AlignedTree::iterator& it1,
-               const AlignedTree::iterator& it2);
+typedef AlignedTree::iterator NodeIter;
+
+bool operator<(const NodeIter& it1, const NodeIter& it2);
 
 #endif
