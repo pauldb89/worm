@@ -1,6 +1,7 @@
 #ifndef _REORDERER_H_
 #define _REORDERER_H_
 
+#include <chrono>
 #include <map>
 
 #include "grammar.h"
@@ -8,9 +9,11 @@
 #include "rule_matcher.h"
 
 using namespace std;
+using namespace chrono;
 
 typedef AlignedTree::iterator NodeIter;
 typedef map<NodeIter, double> Cache;
+typedef high_resolution_clock Clock;
 
 class RuleStatsReporter;
 

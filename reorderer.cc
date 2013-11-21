@@ -66,12 +66,12 @@ String Reorderer::ConstructReordering(const NodeIter& tree_node) {
     }
   }
   assert(match_frontier);
-  const String& reordering = rule->first.second;
-  for (const auto& node: reordering) {
+  const String& reordered_frontier = rule->first.second;
+  for (const auto& node: reordered_frontier) {
     if (node.IsSetWord()) {
       result.push_back(node);
     } else {
-      auto subresult = ConstructReordering(frontier[node.GetVarIndex()]);
+      const auto& subresult = ConstructReordering(frontier[node.GetVarIndex()]);
       copy(subresult.begin(), subresult.end(), back_inserter(result));
     }
   }

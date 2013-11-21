@@ -2,6 +2,8 @@
 
 #include "grammar.h"
 
+#include <iostream>
+
 MultiSampleReorderer::MultiSampleReorderer(
     const AlignedTree& tree,
     const Grammar& grammar,

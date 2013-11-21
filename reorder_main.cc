@@ -115,12 +115,18 @@ int main(int argc, char** argv) {
           input_trees[i], grammar, reporter);
     }
 
+    Clock::time_point reordering_start = Clock::now();
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
       reorderings[i] = reorderer->ConstructReordering();
     }
+    Clock::time_point reordering_end = Clock::now();
+    double reordering_duration = duration_cast<milliseconds>(
+        reordering_end - reordering_start).count() / 1000.0;
+    cerr << "Time required to reorder sentence: " << reordering_duration
+         << " seconds..." << endl;
 
     #pragma omp critical
     {
