@@ -32,7 +32,7 @@ class Reorderer : public ReordererBase {
   virtual void Combine(double& cache_prob, double match_prob) = 0;
 
  private:
-  String ConstructReordering(const NodeIter& tree_node);
+  void ConstructReordering(const NodeIter& tree_node, String& reordering);
 
   shared_ptr<pair<Rule, double>> SelectRule(const NodeIter& node);
 
