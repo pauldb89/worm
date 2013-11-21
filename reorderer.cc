@@ -28,30 +28,30 @@ void Reorderer::ConstructProbabilityCache() {
 }
 
 String Reorderer::ConstructReordering() {
-  String reordering = ConstructReordering(tree.begin());
+  String reordering;
+  ConstructReordering(tree.begin(), reordering);
   for (size_t i = 0; i < reordering.size(); ++i) {
     reordering[i].SetWordIndex(i);
   }
   return reordering;
 }
 
-String Reorderer::ConstructReordering(const NodeIter& tree_node) {
-  String result;
+void Reorderer::ConstructReordering(
+    const NodeIter& tree_node, String& reordering) {
   shared_ptr<pair<Rule, double>> rule = SelectRule(tree_node);
   if (rule == nullptr) {
     if (tree_node.number_of_children() == 0) {
       // Unknown terminal: Not much to do about it, simply return it as is.
-      result.push_back(StringNode(tree_node->GetWord(), -1, -1));
+      reordering.push_back(StringNode(tree_node->GetWord(), -1, -1));
     } else {
       // Unknown interior rule: No reordering is applied.
       auto child = tree.begin(tree_node);
       while (child != tree.end(tree_node)) {
-        String subresult = ConstructReordering(child);
-        copy(subresult.begin(), subresult.end(), back_inserter(result));
+        ConstructReordering(child, reordering);
         ++child;
       }
     }
-    return result;
+    return;
   }
 
   reporter->UpdateRuleStats(*rule);
@@ -69,13 +69,11 @@ String Reorderer::ConstructReordering(const NodeIter& tree_node) {
   const String& reordered_frontier = rule->first.second;
   for (const auto& node: reordered_frontier) {
     if (node.IsSetWord()) {
-      result.push_back(node);
+      reordering.push_back(node);
     } else {
-      const auto& subresult = ConstructReordering(frontier[node.GetVarIndex()]);
-      copy(subresult.begin(), subresult.end(), back_inserter(result));
+      ConstructReordering(frontier[node.GetVarIndex()], reordering);
     }
   }
-  return result;
 }
 
 shared_ptr<pair<Rule, double>> Reorderer::SelectRule(const NodeIter& node) {
