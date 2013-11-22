@@ -75,6 +75,9 @@ void Sampler::Sample(const string& prefix, int iterations,
     if (iter % log_frequency == 0) {
       cerr << "Serializing the grammar..." << endl;
       SerializeGrammar(prefix + "." + to_string(iter), false);
+      if (reorder) {
+        SerializeReorderings(prefix + "." + to_string(iter));
+      }
       cerr << "Done..." << endl;
     }
 
