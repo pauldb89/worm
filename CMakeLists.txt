@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(worm)
 
 find_package(OpenMP REQUIRED)
-find_package(Boost COMPONENTS program_options regex REQUIRED)
+find_package(Boost COMPONENTS program_options regex thread REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x ${OpenMP_CXX_FLAGS}")

@@ -4,6 +4,8 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <boost/thread/shared_mutex.hpp>
+
 #include "restaurant.h"
 #include "util.h"
 
@@ -30,8 +32,8 @@ class SynchronizedRuleCounts {
 
  private:
   unordered_map<int, RuleCounts> counts;
-  unordered_map<int, shared_ptr<mutex>> locks;
-  mutex general_lock;
+  unordered_map<int, shared_ptr<boost::shared_mutex>> mutexes;
+  mutex general_mutex;
 
   double alpha;
 };
