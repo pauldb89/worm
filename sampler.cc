@@ -17,18 +17,20 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<PCFGTable>& pcfg_table,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
-                 RandomGenerator& generator, bool enable_all_stats,
-                 int min_rule_count, bool reorder, double penalty,
+                 RandomGenerator& generator, int num_threads,
+                 bool enable_all_stats, int min_rule_count,
+                 bool reorder, double penalty,
                  int max_leaves, int max_tree_size, double alpha,
                  double pexpand, double pchild, double pterm) :
     training(training),
-    counts(alpha),
+    counts(num_threads, alpha),
     dictionary(dictionary),
     pcfg_table(pcfg_table),
     forward_table(forward_table),
     reverse_table(reverse_table),
     generator(generator),
     uniform_distribution(0, 1),
+    num_threads(num_threads),
     enable_all_stats(enable_all_stats),
     min_rule_count(min_rule_count),
     reorder(reorder),
@@ -42,6 +44,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     prob_stop_str(log(pterm)),
     prob_cont_str(log(1 - pterm)) {
   set<int> non_terminals, source_terminals, target_terminals;
+  // Do not parallelize.
   for (auto instance: *training) {
     for (auto node: instance.first) {
       if (!non_terminals.count(node.GetTag())) {
@@ -64,9 +67,10 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
   prob_tt = -log(target_terminals.size());
 }
 
-void Sampler::Sample(const string& prefix, int iterations,
-                     int num_threads, int log_frequency) {
+void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
   InitializeRuleCounts();
+
+  counts.Synchronize();
 
   for (int iter = 0; iter < iterations; ++iter) {
     Clock::time_point start_time = Clock::now();
@@ -97,8 +101,10 @@ void Sampler::Sample(const string& prefix, int iterations,
       SampleSwaps(instance);
     }
 
+    counts.Synchronize();
+
     if (reorder) {
-      InferReorderings(num_threads);
+      InferReorderings();
     }
 
     Clock::time_point stop_time = Clock::now();
@@ -110,7 +116,9 @@ void Sampler::Sample(const string& prefix, int iterations,
 }
 
 void Sampler::InitializeRuleCounts() {
-  for (auto instance: *training) {
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
@@ -158,11 +166,12 @@ void Sampler::DisplayStats() {
 }
 
 double Sampler::ComputeDataLikelihood() {
-  SynchronizedRuleCounts new_counts(alpha);
+  DistributedRuleCounts new_counts(num_threads, alpha);
   for (auto nonterminal: counts.GetNonterminals()) {
     new_counts.AddNonterminal(nonterminal);
   }
 
+  // Do not parallelize.
   double likelihood = 0;
   for (auto instance: *training) {
     CacheSentence(instance);
@@ -182,6 +191,7 @@ double Sampler::ComputeDataLikelihood() {
 
 double Sampler::ComputeAverageNumInteriorNodes() {
   double interior_nodes = 0, total_rules = 0;
+  // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
@@ -193,11 +203,13 @@ double Sampler::ComputeAverageNumInteriorNodes() {
     }
   }
 
+  cerr << "\tTotal rules: " << total_rules << endl;
   return interior_nodes / total_rules;
 }
 
 int Sampler::GetGrammarSize() {
   set<Rule> grammar;
+  // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
@@ -211,6 +223,7 @@ int Sampler::GetGrammarSize() {
 
 map<int, int> Sampler::GenerateRuleHistogram() {
   map<int, int> histogram;
+  // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
@@ -684,7 +697,7 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
   return make_pair(forward_alignment, reverse_alignment);
 }
 
-void Sampler::InferReorderings(int num_threads) {
+void Sampler::InferReorderings() {
   cerr << "Inferring reorderings..." << endl;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < training->size(); ++i) {
@@ -707,7 +720,7 @@ void Sampler::InferReorderings(int num_threads) {
 void Sampler::SerializeAlignments(const string& output_prefix) {
   ofstream fwd_out(output_prefix + ".fwd_align");
   ofstream rev_out(output_prefix + ".rev_align");
-
+  // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
 
@@ -753,6 +766,7 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   unordered_map<int, map<Rule, int>> rule_counts;
   unordered_map<int, map<Rule, double>> rule_probs;
+  // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
 

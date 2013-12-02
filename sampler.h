@@ -7,16 +7,16 @@
 
 #include "aligned_tree.h"
 #include "dictionary.h"
+#include "distributed_rule_counts.h"
 #include "rule_reorderer.h"
-#include "synchronized_restaurant.h"
 #include "util.h"
 
 using namespace std;
 
-typedef Restaurant<Rule> RuleCounts;
-
 class PCFGTable;
 class TranslationTable;
+
+typedef mt19937 RandomGenerator;
 
 class Sampler {
  public:
@@ -24,13 +24,12 @@ class Sampler {
           const shared_ptr<PCFGTable>& pcfg_table,
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& reverse_table,
-          RandomGenerator& generator, bool enable_all_stats,
+          RandomGenerator& generator, int num_threads, bool enable_all_stats,
           int min_rule_count, bool reorder, double penalty,
           int max_leaves, int max_tree_size, double alpha,
           double pexpand, double pchild, double pterm);
 
-  void Sample(const string& output_prefix, int iterations,
-              int num_threads, int log_frequency);
+  void Sample(const string& output_prefix, int iterations, int log_frequency);
 
   void SerializeAlignments(const string& output_prefix);
 
@@ -86,14 +85,14 @@ class Sampler {
 
   pair<Alignment, Alignment> ConstructAlignments(const Rule& rule);
 
-  void InferReorderings(int num_threads);
+  void InferReorderings();
 
   void ExtractReordering(const Instance& instance,
                          const NodeIter& node,
                          String& reordering);
 
   shared_ptr<vector<Instance>> training;
-  SynchronizedRuleCounts counts;
+  DistributedRuleCounts counts;
 
   Dictionary& dictionary;
   shared_ptr<PCFGTable> pcfg_table;
@@ -102,6 +101,7 @@ class Sampler {
   RandomGenerator& generator;
   uniform_real_distribution<double> uniform_distribution;
 
+  int num_threads;
   bool enable_all_stats;
   // Parameters for filtering the final rules.
   int min_rule_count;
