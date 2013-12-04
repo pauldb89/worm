@@ -233,7 +233,9 @@ map<int, int> Sampler::GenerateRuleHistogram() {
 
         if (frag.size() > 1) {
           for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-            --inner_nodes;
+            if (leaf->IsSplitNode()) {
+              --inner_nodes;
+            }
           }
         }
 
