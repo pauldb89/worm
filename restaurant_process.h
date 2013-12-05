@@ -18,6 +18,10 @@ class RestaurantProcess {
   double GetLogProbability(const Table& table, int delta_numerator,
                            int delta_denominator, double log_p0) const;
 
+  int Count(const Table& table) const;
+
+  int GetTotal() const;
+
   bool operator==(const RestaurantProcess<Table>& other) const;
 
  private:

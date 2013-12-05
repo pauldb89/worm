@@ -97,7 +97,7 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
         continue;
       }
       CacheSentence(instance);
-      SampleAlignments(instance);
+      SampleAlignments(instance, schedule[i]);
       SampleSwaps(instance);
     }
 
@@ -247,7 +247,7 @@ map<int, int> Sampler::GenerateRuleHistogram() {
   return histogram;
 }
 
-void Sampler::SampleAlignments(const Instance& instance) {
+void Sampler::SampleAlignments(const Instance& instance, int index) {
   const AlignedTree& tree = instance.first;
   vector<NodeIter> schedule = GetRandomSchedule(tree);
 

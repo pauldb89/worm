@@ -52,7 +52,7 @@ class Sampler {
 
   map<int, int> GenerateRuleHistogram();
 
-  void SampleAlignments(const Instance& instance);
+  void SampleAlignments(const Instance& instance, int index);
 
   void SampleSwaps(const Instance& instance);
 

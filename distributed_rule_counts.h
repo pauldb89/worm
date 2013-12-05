@@ -27,6 +27,10 @@ class DistributedRuleCounts {
 
   vector<int> GetNonterminals();
 
+  int Count(const Rule& rule) const;
+
+  int Count(int nonterminal) const;
+
   void Synchronize();
 
  private:

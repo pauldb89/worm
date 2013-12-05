@@ -2,7 +2,7 @@
 
 #include "dictionary.h"
 
-const double TranslationTable::DEFAULT_NULL_PROB = 1e-50;
+const double TranslationTable::DEFAULT_NULL_PROB = 1e-3;
 
 TranslationTable::TranslationTable(
     ifstream& fin, Dictionary& source_vocabulary,
@@ -38,11 +38,11 @@ double TranslationTable::ComputeAverageLogProbability(
     int thread_id) {
   double result = 0;
   for (auto target_index: target_indexes) {
-    double sum = cache[thread_id][target_index].back();
+    double best = cache[thread_id][target_index].back();
     for (auto source_index: source_indexes) {
-      sum += cache[thread_id][target_index][source_index];
+      best = max(best, cache[thread_id][target_index][source_index]);
     }
-    result += log(sum / (source_indexes.size() + 1));
+    result += log(best);
   }
 
   return result;

@@ -50,6 +50,17 @@ double RestaurantProcess<Table>::GetLogProbability(
 }
 
 template<class Table>
+int RestaurantProcess<Table>::Count(const Table& table) const {
+  auto it = table_counts.find(table);
+  return it != table_counts.end() ? it->second : 0;
+}
+
+template<class Table>
+int RestaurantProcess<Table>::GetTotal() const {
+  return total_count;
+}
+
+template<class Table>
 bool RestaurantProcess<Table>::operator==(
     const RestaurantProcess<Table>& other) const {
   return table_counts == other.table_counts &&

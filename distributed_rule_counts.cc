@@ -91,6 +91,17 @@ void DistributedRuleCounts::UpdateCounts(
   }
 }
 
+int DistributedRuleCounts::Count(const Rule& rule) const {
+  int thread_id = omp_get_thread_num();
+  int root_tag = rule.first.GetRootTag();
+  return rule_counts[thread_id].at(root_tag).Count(rule);
+}
+
+int DistributedRuleCounts::Count(int nonterminal) const {
+  int thread_id = omp_get_thread_num();
+  return rule_counts[thread_id].at(nonterminal).GetTotal();
+}
+
 void DistributedRuleCounts::Synchronize() {
   cerr << "Synchronizing..." << endl;
   Clock::time_point start_time = Clock::now();
