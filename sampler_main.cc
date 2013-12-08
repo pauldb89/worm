@@ -142,15 +142,14 @@ int main(int argc, char **argv) {
   }
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
-                  reverse_table, generator,
+                  reverse_table, generator, num_threads,
                   vm.count("stats"), vm["min_rule_count"].as<int>(),
                   vm.count("reorder"), vm["penalty"].as<double>(),
                   vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>(),
                   vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
                   vm["pchild"].as<double>(), vm["pterm"].as<double>());
   string prefix = vm["output"].as<string>();
-  sampler.Sample(prefix, vm["iterations"].as<int>(),
-                 num_threads, vm["log_freq"].as<int>());
+  sampler.Sample(prefix, vm["iterations"].as<int>(), vm["log_freq"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
