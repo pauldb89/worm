@@ -6,6 +6,7 @@
 
 #include "node.h"
 #include "pcfg_table.h"
+#include "time_util.h"
 #include "translation_table.h"
 
 using namespace chrono;
@@ -72,8 +73,33 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
 
   counts.Synchronize();
 
+  ofstream tmpout("tmp.log");
+
   for (int iter = 0; iter < iterations; ++iter) {
-    Clock::time_point start_time = Clock::now();
+    auto start_time = Clock::now();
+    for (int i = 0; i < 5; ++i) {
+      double total_rules = 0, interior_nodes = 0;
+      const AlignedTree& tree = (*training)[i].first;
+      for (auto node = tree.begin(); node != tree.end(); ++node) {
+        if (node->IsSplitNode()) {
+          ++total_rules;
+        } else {
+          ++interior_nodes;
+        }
+      }
+
+      cerr << "Entry: " << i << " ratio: " << interior_nodes / total_rules
+           << endl;
+    }
+
+    const AlignedTree& tree = (*training)[1].first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      auto span = node->GetSpan();
+      tmpout << dictionary.GetToken(node->GetTag()) << " "
+           << span.first << " " << span.second << endl;
+    }
+    tmpout << "------------------------------" << endl;
+
     DisplayStats();
 
     if (iter % log_frequency == 0) {
@@ -107,10 +133,9 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
       InferReorderings();
     }
 
-    Clock::time_point stop_time = Clock::now();
-    auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
+    auto end_time = Clock::now();
     cout << "Iteration " << iter << " completed in "
-         << duration / 1000.0 << " seconds" << endl;
+         << GetDuration(start_time, end_time) << " seconds" << endl;
   }
   DisplayStats();
 }
@@ -150,6 +175,7 @@ void Sampler::CacheSentence(const Instance& instance) {
 }
 
 void Sampler::DisplayStats() {
+  auto start_time = Clock::now();
   cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   if (enable_all_stats) {
     cout << "\tAverage number of interior nodes: "
@@ -163,6 +189,9 @@ void Sampler::DisplayStats() {
     }
     cout << endl;
   }
+  auto end_time = Clock::now();
+  cerr << "Computing stats took: " << GetDuration(start_time, end_time)
+       << " seconds..." << endl;
 }
 
 double Sampler::ComputeDataLikelihood() {

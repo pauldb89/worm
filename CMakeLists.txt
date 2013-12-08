@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x ${OpenMP_CXX_FLAGS}
 
 set(sampler_SRCS aligned_tree.cc dictionary.cc distributed_rule_counts.cc
     node.cc pcfg_table.cc rule_reorderer.cc sampler.cc sampler_main.cc
-    translation_table.cc util.cc)
+    time_util.cc translation_table.cc util.cc)
 add_executable(sampler ${sampler_SRCS})
 target_link_libraries(sampler ${Boost_LIBRARIES})
 
