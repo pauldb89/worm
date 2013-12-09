@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
           "Number of threads to use for sampling")
       ("align", "Infer alignments instead of a STSG grammar")
       ("reorder", "Infer reordering directly from sampled variables")
+      ("smart_expand", "Use smart expansion probabilities")
       ("stats", "Display statistics about the grammar after each iteration")
       ("scfg", "Print grammar as SCFG instead of STSG")
       ("penalty", po::value<double>()->default_value(0.1)->required(),
@@ -142,8 +143,8 @@ int main(int argc, char **argv) {
   }
   RandomGenerator generator(seed);
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
-                  reverse_table, generator, num_threads,
-                  vm.count("stats"), vm["min_rule_count"].as<int>(),
+                  reverse_table, generator, num_threads, vm.count("stats"),
+                  vm.count("smart_expand"), vm["min_rule_count"].as<int>(),
                   vm.count("reorder"), vm["penalty"].as<double>(),
                   vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>(),
                   vm["alpha"].as<double>(), vm["pexpand"].as<double>(),

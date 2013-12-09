@@ -19,8 +19,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
                  RandomGenerator& generator, int num_threads,
-                 bool enable_all_stats, int min_rule_count,
-                 bool reorder, double penalty,
+                 bool enable_all_stats, bool smart_expand,
+                 int min_rule_count, bool reorder, double penalty,
                  int max_leaves, int max_tree_size, double alpha,
                  double pexpand, double pchild, double pterm) :
     training(training),
@@ -37,6 +37,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     reorder(reorder),
     rule_reorderer(penalty, max_leaves, max_tree_size),
     reorder_counts(training->size()),
+    smart_expand(smart_expand),
     alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -60,6 +61,23 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
 
     for (auto target_word: instance.second) {
       target_terminals.insert(target_word.GetWord());
+    }
+  }
+
+  if (smart_expand) {
+    unordered_map<int, int> split_counts;
+    for (auto instance: *training) {
+      for (auto node: instance.first) {
+        if (node.IsSplitNode()) {
+          ++split_counts[node.GetTag()];
+        }
+      }
+    }
+
+    for (const auto& entry: split_counts) {
+      double expand_prob = entry.second * sqrt(entry.second) + 1;
+      expand_probs[entry.first] = -log(expand_prob);
+      not_expand_probs[entry.first] = log((expand_prob - 1) / expand_prob);
     }
   }
 
@@ -554,11 +572,14 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
       }
 
       // Check if the node expands or not.
+      int tag = node->GetTag();
+      assert(not_expand_probs.count(tag));
+      assert(expand_probs.count(tag));
       if (node->IsSplitNode()) {
-        prob_frag += prob_not_expand;
+        prob_frag += smart_expand ? not_expand_probs[tag] : prob_not_expand;
         ++vars;
       } else {
-        prob_frag += prob_expand;
+        prob_frag += smart_expand ? expand_probs[tag] : prob_expand;
       }
     }
 

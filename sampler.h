@@ -25,7 +25,7 @@ class Sampler {
           const shared_ptr<TranslationTable>& forward_table,
           const shared_ptr<TranslationTable>& reverse_table,
           RandomGenerator& generator, int num_threads, bool enable_all_stats,
-          int min_rule_count, bool reorder, double penalty,
+          bool smart_expand, int min_rule_count, bool reorder, double penalty,
           int max_leaves, int max_tree_size, double alpha,
           double pexpand, double pchild, double pterm);
 
@@ -110,6 +110,9 @@ class Sampler {
   RuleReorderer rule_reorderer;
   vector<map<String, int>> reorder_counts;
 
+  bool smart_expand;
+  unordered_map<int, double> expand_probs;
+  unordered_map<int, double> not_expand_probs;
   double alpha;
   double prob_expand, prob_not_expand;
   double prob_stop_child, prob_cont_child;
