@@ -200,61 +200,83 @@ double Sampler::ComputeDataLikelihood() {
     new_counts.AddNonterminal(nonterminal);
   }
 
-  // Do not parallelize.
-  double likelihood = 0;
-  for (auto instance: *training) {
+  vector<double> likelihoods(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const Instance& instance = (*training)[i];
     CacheSentence(instance);
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         const Rule& rule = GetRule(instance, node);
         double prob = ComputeLogBaseProbability(rule);
-        likelihood += new_counts.GetLogProbability(rule, prob);
+        likelihoods[thread_id] += new_counts.GetLogProbability(rule, prob);
         new_counts.Increment(rule);
       }
     }
+  }
+
+  double likelihood = 0;
+  for (int i = 0; i < num_threads; ++i) {
+    likelihood += likelihoods[i];
   }
 
   return likelihood;
 }
 
 double Sampler::ComputeAverageNumInteriorNodes() {
-  double interior_nodes = 0, total_rules = 0;
-  // Do not parallelize.
-  for (auto instance: *training) {
-    const AlignedTree& tree = instance.first;
+  vector<int> interior_nodes(num_threads), total_rules(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const AlignedTree& tree = (*training)[i].first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (!node->IsSplitNode()) {
-        ++interior_nodes;
+        ++interior_nodes[thread_id];
       } else {
-        ++total_rules;
+        ++total_rules[thread_id];
       }
     }
   }
 
-  cerr << "\tTotal rules: " << total_rules << endl;
-  return interior_nodes / total_rules;
+  int interior_nodes_sum = 0, total_rules_sum = 0;
+  for (int i = 0; i < num_threads; ++i) {
+    interior_nodes_sum += interior_nodes[i];
+    total_rules_sum += total_rules[i];
+  }
+
+  cerr << "\tTotal rules: " << total_rules_sum << endl;
+  return (double) interior_nodes_sum / total_rules_sum;
 }
 
 int Sampler::GetGrammarSize() {
-  set<Rule> grammar;
-  // Do not parallelize.
-  for (auto instance: *training) {
+  vector<set<Rule>> grammars(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        grammar.insert(GetRule(instance, node));
+        grammars[thread_id].insert(GetRule(instance, node));
       }
     }
+  }
+
+  set<Rule> grammar;
+  for (int i = 0; i < num_threads; ++i) {
+    grammar.insert(grammars[i].begin(), grammars[i].end());
   }
   return grammar.size();
 }
 
 map<int, int> Sampler::GenerateRuleHistogram() {
-  map<int, int> histogram;
-  // Do not parallelize.
-  for (auto instance: *training) {
-    const AlignedTree& tree = instance.first;
+  vector<map<int, int>> histograms(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const AlignedTree& tree = (*training)[i].first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         const AlignedTree& frag = tree.GetFragment(node);
@@ -268,8 +290,15 @@ map<int, int> Sampler::GenerateRuleHistogram() {
           }
         }
 
-        ++histogram[inner_nodes];
+        ++histograms[thread_id][inner_nodes];
       }
+    }
+  }
+
+  map<int, int> histogram;
+  for (int i = 0; i < num_threads; ++i) {
+    for (const auto& entry: histograms[i]) {
+      histogram[entry.first] += entry.second;
     }
   }
 
