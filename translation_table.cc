@@ -2,7 +2,7 @@
 
 #include "dictionary.h"
 
-const double TranslationTable::DEFAULT_NULL_PROB = 1e-3;
+const double TranslationTable::DEFAULT_NULL_PROB = 1e-2;
 
 TranslationTable::TranslationTable(
     ifstream& fin, Dictionary& source_vocabulary,
@@ -13,7 +13,9 @@ TranslationTable::TranslationTable(
   while (fin >> source_id >> target_id >> prob) {
     int source_word = dict.GetIndex(source_vocabulary.GetToken(source_id));
     int target_word = dict.GetIndex(target_vocabulary.GetToken(target_id));
-    table[make_pair(source_word, target_word)] = prob;
+    if (prob >= DEFAULT_NULL_PROB) {
+      table[make_pair(source_word, target_word)] = prob;
+    }
   }
 }
 

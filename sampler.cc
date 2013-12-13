@@ -6,6 +6,7 @@
 
 #include "node.h"
 #include "pcfg_table.h"
+#include "time_util.h"
 #include "translation_table.h"
 
 using namespace chrono;
@@ -18,8 +19,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const shared_ptr<TranslationTable>& forward_table,
                  const shared_ptr<TranslationTable>& reverse_table,
                  RandomGenerator& generator, int num_threads,
-                 bool enable_all_stats, int min_rule_count,
-                 bool reorder, double penalty,
+                 bool enable_all_stats, bool smart_expand,
+                 int min_rule_count, bool reorder, double penalty,
                  int max_leaves, int max_tree_size, double alpha,
                  double pexpand, double pchild, double pterm) :
     training(training),
@@ -36,6 +37,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     reorder(reorder),
     rule_reorderer(penalty, max_leaves, max_tree_size),
     reorder_counts(training->size()),
+    smart_expand(smart_expand),
     alpha(alpha),
     prob_expand(log(pexpand)),
     prob_not_expand(log(1 - pexpand)),
@@ -62,6 +64,23 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     }
   }
 
+  if (smart_expand) {
+    unordered_map<int, int> split_counts;
+    for (auto instance: *training) {
+      for (auto node: instance.first) {
+        if (node.IsSplitNode()) {
+          ++split_counts[node.GetTag()];
+        }
+      }
+    }
+
+    for (const auto& entry: split_counts) {
+      double expand_prob = entry.second * sqrt(entry.second) + 1;
+      expand_probs[entry.first] = -log(expand_prob);
+      not_expand_probs[entry.first] = log((expand_prob - 1) / expand_prob);
+    }
+  }
+
   prob_nt = -log(non_terminals.size());
   prob_st = -log(source_terminals.size());
   prob_tt = -log(target_terminals.size());
@@ -72,8 +91,33 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
 
   counts.Synchronize();
 
+  ofstream tmpout("tmp.log");
+
   for (int iter = 0; iter < iterations; ++iter) {
-    Clock::time_point start_time = Clock::now();
+    auto start_time = Clock::now();
+    for (int i = 0; i < 5; ++i) {
+      double total_rules = 0, interior_nodes = 0;
+      const AlignedTree& tree = (*training)[i].first;
+      for (auto node = tree.begin(); node != tree.end(); ++node) {
+        if (node->IsSplitNode()) {
+          ++total_rules;
+        } else {
+          ++interior_nodes;
+        }
+      }
+
+      cerr << "Entry: " << i << " ratio: " << interior_nodes / total_rules
+           << endl;
+    }
+
+    const AlignedTree& tree = (*training)[1].first;
+    for (auto node = tree.begin(); node != tree.end(); ++node) {
+      auto span = node->GetSpan();
+      tmpout << dictionary.GetToken(node->GetTag()) << " "
+           << span.first << " " << span.second << endl;
+    }
+    tmpout << "------------------------------" << endl;
+
     DisplayStats();
 
     if (iter % log_frequency == 0) {
@@ -107,10 +151,9 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
       InferReorderings();
     }
 
-    Clock::time_point stop_time = Clock::now();
-    auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
+    auto end_time = Clock::now();
     cout << "Iteration " << iter << " completed in "
-         << duration / 1000.0 << " seconds" << endl;
+         << GetDuration(start_time, end_time) << " seconds" << endl;
   }
   DisplayStats();
 }
@@ -150,6 +193,7 @@ void Sampler::CacheSentence(const Instance& instance) {
 }
 
 void Sampler::DisplayStats() {
+  auto start_time = Clock::now();
   cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   if (enable_all_stats) {
     cout << "\tAverage number of interior nodes: "
@@ -163,6 +207,9 @@ void Sampler::DisplayStats() {
     }
     cout << endl;
   }
+  auto end_time = Clock::now();
+  cerr << "Computing stats took: " << GetDuration(start_time, end_time)
+       << " seconds..." << endl;
 }
 
 double Sampler::ComputeDataLikelihood() {
@@ -171,61 +218,83 @@ double Sampler::ComputeDataLikelihood() {
     new_counts.AddNonterminal(nonterminal);
   }
 
-  // Do not parallelize.
-  double likelihood = 0;
-  for (auto instance: *training) {
+  vector<double> likelihoods(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const Instance& instance = (*training)[i];
     CacheSentence(instance);
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         const Rule& rule = GetRule(instance, node);
         double prob = ComputeLogBaseProbability(rule);
-        likelihood += new_counts.GetLogProbability(rule, prob);
+        likelihoods[thread_id] += new_counts.GetLogProbability(rule, prob);
         new_counts.Increment(rule);
       }
     }
+  }
+
+  double likelihood = 0;
+  for (int i = 0; i < num_threads; ++i) {
+    likelihood += likelihoods[i];
   }
 
   return likelihood;
 }
 
 double Sampler::ComputeAverageNumInteriorNodes() {
-  double interior_nodes = 0, total_rules = 0;
-  // Do not parallelize.
-  for (auto instance: *training) {
-    const AlignedTree& tree = instance.first;
+  vector<int> interior_nodes(num_threads), total_rules(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const AlignedTree& tree = (*training)[i].first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (!node->IsSplitNode()) {
-        ++interior_nodes;
+        ++interior_nodes[thread_id];
       } else {
-        ++total_rules;
+        ++total_rules[thread_id];
       }
     }
   }
 
-  cerr << "\tTotal rules: " << total_rules << endl;
-  return interior_nodes / total_rules;
+  int interior_nodes_sum = 0, total_rules_sum = 0;
+  for (int i = 0; i < num_threads; ++i) {
+    interior_nodes_sum += interior_nodes[i];
+    total_rules_sum += total_rules[i];
+  }
+
+  cerr << "\tTotal rules: " << total_rules_sum << endl;
+  return (double) interior_nodes_sum / total_rules_sum;
 }
 
 int Sampler::GetGrammarSize() {
-  set<Rule> grammar;
-  // Do not parallelize.
-  for (auto instance: *training) {
+  vector<set<Rule>> grammars(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        grammar.insert(GetRule(instance, node));
+        grammars[thread_id].insert(GetRule(instance, node));
       }
     }
+  }
+
+  set<Rule> grammar;
+  for (int i = 0; i < num_threads; ++i) {
+    grammar.insert(grammars[i].begin(), grammars[i].end());
   }
   return grammar.size();
 }
 
 map<int, int> Sampler::GenerateRuleHistogram() {
-  map<int, int> histogram;
-  // Do not parallelize.
-  for (auto instance: *training) {
-    const AlignedTree& tree = instance.first;
+  vector<map<int, int>> histograms(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const AlignedTree& tree = (*training)[i].first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         const AlignedTree& frag = tree.GetFragment(node);
@@ -239,8 +308,15 @@ map<int, int> Sampler::GenerateRuleHistogram() {
           }
         }
 
-        ++histogram[inner_nodes];
+        ++histograms[thread_id][inner_nodes];
       }
+    }
+  }
+
+  map<int, int> histogram;
+  for (int i = 0; i < num_threads; ++i) {
+    for (const auto& entry: histograms[i]) {
+      histogram[entry.first] += entry.second;
     }
   }
 
@@ -496,11 +572,14 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
       }
 
       // Check if the node expands or not.
+      int tag = node->GetTag();
+      assert(not_expand_probs.count(tag));
+      assert(expand_probs.count(tag));
       if (node->IsSplitNode()) {
-        prob_frag += prob_not_expand;
+        prob_frag += smart_expand ? not_expand_probs[tag] : prob_not_expand;
         ++vars;
       } else {
-        prob_frag += prob_expand;
+        prob_frag += smart_expand ? expand_probs[tag] : prob_expand;
       }
     }
 
