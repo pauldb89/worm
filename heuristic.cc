@@ -129,8 +129,13 @@ int main(int argc, char** argv) {
          parse_trees.size() == gdfa_alignments.size() &&
          parse_trees.size() == intersect_alignments.size());
 
+  unordered_set<int> blacklisted_tags;
+  for (const string& tag: {"IN", "DT", "CC"}) {
+    blacklisted_tags.insert(dictionary.GetIndex(tag));
+  }
   AlignmentHeuristic heuristic(
-      forward_table, reverse_table, vm["max_links"].as<unsigned int>());
+      forward_table, reverse_table, blacklisted_tags,
+      vm["max_links"].as<unsigned int>());
   auto start_time = GetTime();
   vector<Alignment> best_alignments(parse_trees.size());
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
