@@ -5,19 +5,19 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <unordered_set>
 
 #include <boost/regex.hpp>
 
 #include "aligned_tree.h"
 #include "dictionary.h"
 
-Instance ReadInstance(istream& tree_stream,
-                      istream& string_stream,
-                      istream& alignment_stream,
-                      Dictionary& dictionary) {
-  AlignedTree tree = ReadParseTree(tree_stream, dictionary);
-  String target_string = ReadTargetString(string_stream, dictionary);
-  ConstructGHKMDerivation(tree, target_string, alignment_stream, dictionary);
+Instance ConstructInstance(
+    const AlignedTree& parse_tree,
+    const String& target_string,
+    const Alignment& alignment) {
+  AlignedTree tree = parse_tree;
+  ConstructGHKMDerivation(tree, target_string, alignment);
   return Instance(tree, target_string);
 }
 
@@ -131,11 +131,7 @@ istream& operator>>(istream& in, Alignment& alignment) {
 
 void ConstructGHKMDerivation(AlignedTree& tree,
                              const String& target_string,
-                             istream& alignment_stream,
-                             Dictionary& dictionary) {
-  Alignment alignment;
-  alignment_stream >> alignment;
-
+                             const Alignment& alignment) {
   // Ignore parse failures.
   if (tree.size() <= 1) {
     return;

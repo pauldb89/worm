@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "definitions.h"
 #include "dictionary.h"
 
 int AlignedTree::GetRootTag() const {

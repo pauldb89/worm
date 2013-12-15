@@ -10,6 +10,7 @@
 #include "dictionary.h"
 #include "pcfg_table.h"
 #include "sampler.h"
+#include "time_util.h"
 #include "translation_table.h"
 #include "util.h"
 
@@ -29,7 +30,7 @@ int main(int argc, char **argv) {
       ("strings,s", po::value<string>()->required(),
           "File containing target strings")
       ("alignment,a", po::value<string>()->required(),
-          "File containing word alignments for GHKM")
+          "File containing alignments for GHKM")
       ("output,o", po::value<string>()->required(), "Output prefix")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads to use for sampling")
@@ -94,29 +95,7 @@ int main(int argc, char **argv) {
   int num_threads = vm["threads"].as<int>();
   cerr << "Sampling with " << num_threads << " threads..." << endl;
 
-  cerr << "Reading training data..." << endl;
   Dictionary dictionary;
-  shared_ptr<vector<Instance>> training = make_shared<vector<Instance>>();
-  ifstream tree_stream(vm["trees"].as<string>());
-  ifstream string_stream(vm["strings"].as<string>());
-  ifstream alignment_stream(vm["alignment"].as<string>());
-  while (!tree_stream.eof() && !string_stream.eof() &&
-         !alignment_stream.eof()) {
-    training->push_back(ReadInstance(tree_stream, string_stream,
-                                     alignment_stream, dictionary));
-    tree_stream >> ws;
-    string_stream >> ws;
-    alignment_stream >> ws;
-  }
-  cerr << "Done..." << endl;
-
-  shared_ptr<PCFGTable> pcfg_table;
-  if (vm.count("pcfg")) {
-    cerr << "Constructing PCFG table..." << endl;
-    pcfg_table = make_shared<PCFGTable>(training);
-    cerr << "Done..." << endl;
-  }
-
   cerr << "Reading monolingual dictionaries..." << endl;
   shared_ptr<TranslationTable> forward_table, reverse_table;
   ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
@@ -135,6 +114,51 @@ int main(int argc, char **argv) {
       reverse_stream, target_vocabulary, source_vocabulary, dictionary,
       num_threads);
   cerr << "Done..." << endl;
+
+  cerr << "Reading parse trees..." << endl;
+  vector<AlignedTree> parse_trees;
+  ifstream tree_stream(vm["trees"].as<string>());
+  while (!tree_stream.eof()) {
+    parse_trees.push_back(ReadParseTree(tree_stream, dictionary));
+    tree_stream >> ws;
+  }
+  cerr << "Done..." << endl;
+
+  cerr << "Reading target strings..." << endl;
+  vector<String> target_strings;
+  ifstream string_stream(vm["strings"].as<string>());
+  while (!string_stream.eof()) {
+    target_strings.push_back(ReadTargetString(string_stream, dictionary));
+    string_stream >> ws;
+  }
+  cerr << "Done..." << endl;
+
+  cerr << "Reading alignments..." << endl;
+  vector<Alignment> alignments;
+  ifstream alignment_stream(vm["alignment"].as<string>());
+  while (!alignment_stream.eof()) {
+    Alignment alignment;
+    alignment_stream >> alignment >> ws;
+    alignments.push_back(alignment);
+  }
+  cerr << "Done..." << endl;
+
+  assert(parse_trees.size() == target_strings.size() &&
+         parse_trees.size() == alignments.size());
+
+  shared_ptr<vector<Instance>> training =
+      make_shared<vector<Instance>>(parse_trees.size());
+  for (size_t i = 0; i < training->size(); ++i) {
+    (*training)[i] = ConstructInstance(
+        parse_trees[i], target_strings[i], alignments[i]);
+  }
+
+  shared_ptr<PCFGTable> pcfg_table;
+  if (vm.count("pcfg")) {
+    cerr << "Constructing PCFG table..." << endl;
+    pcfg_table = make_shared<PCFGTable>(training);
+    cerr << "Done..." << endl;
+  }
 
   cerr << "Sampling..." << endl;
   unsigned int seed = vm["seed"].as<unsigned int>();

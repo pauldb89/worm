@@ -11,7 +11,7 @@ using namespace std;
 
 class Dictionary;
 
-typedef boost::hash<pair<int, int>> PairHash;
+typedef boost::hash<pair<int, int>> PairHasher;
 
 class TranslationTable {
  public:
@@ -29,12 +29,12 @@ class TranslationTable {
       const vector<int>& target_indexes,
       int thread_id);
 
-  double GetProbability(int source_word, int target_word);
+  double GetProbability(int source_word, int target_word) const;
 
   static const double DEFAULT_NULL_PROB;
 
  private:
-  unordered_map<pair<int, int>, double, PairHash> table;
+  unordered_map<pair<int, int>, double, PairHasher> table;
   vector<vector<vector<double>>> cache;
 };
 

@@ -50,7 +50,8 @@ double TranslationTable::ComputeAverageLogProbability(
   return result;
 }
 
-double TranslationTable::GetProbability(int source_word, int target_word) {
+double TranslationTable::GetProbability(
+    int source_word, int target_word) const {
   auto result = table.find(make_pair(source_word, target_word));
   if (result != table.end()) {
     return result->second;

@@ -35,8 +35,7 @@ class AlignedTree: public tree<AlignedNode> {
              Dictionary& dictionary, int& var_index) const;
 };
 
-typedef AlignedTree::iterator NodeIter;
-
-bool operator<(const NodeIter& it1, const NodeIter& it2);
+bool operator<(const AlignedTree::iterator& it1,
+               const AlignedTree::iterator& it2);
 
 #endif
