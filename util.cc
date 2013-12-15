@@ -60,7 +60,9 @@ AlignedTree ReadParseTree(istream& tree_stream, Dictionary& dictionary) {
       if (boost::regex_match((string) *it, var_index)) {
         st.top()->SetSplitNode(true);
       } else {
-        st.top()->SetWord(dictionary.GetIndex(*it));
+        string word = *it;
+        transform(word.begin(), word.end(), word.begin(), ::tolower);
+        st.top()->SetWord(dictionary.GetIndex(word));
         st.top()->SetWordIndex(word_index);
         ++word_index;
       }
