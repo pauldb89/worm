@@ -91,33 +91,8 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
 
   counts.Synchronize();
 
-  ofstream tmpout("tmp.log");
-
   for (int iter = 0; iter < iterations; ++iter) {
     auto start_time = Clock::now();
-    for (int i = 0; i < 5; ++i) {
-      double total_rules = 0, interior_nodes = 0;
-      const AlignedTree& tree = (*training)[i].first;
-      for (auto node = tree.begin(); node != tree.end(); ++node) {
-        if (node->IsSplitNode()) {
-          ++total_rules;
-        } else {
-          ++interior_nodes;
-        }
-      }
-
-      cerr << "Entry: " << i << " ratio: " << interior_nodes / total_rules
-           << endl;
-    }
-
-    const AlignedTree& tree = (*training)[1].first;
-    for (auto node = tree.begin(); node != tree.end(); ++node) {
-      auto span = node->GetSpan();
-      tmpout << dictionary.GetToken(node->GetTag()) << " "
-           << span.first << " " << span.second << endl;
-    }
-    tmpout << "------------------------------" << endl;
-
     DisplayStats();
 
     if (iter % log_frequency == 0) {
@@ -573,8 +548,8 @@ double Sampler::ComputeLogBaseProbability(const Rule& rule) {
 
       // Check if the node expands or not.
       int tag = node->GetTag();
-      assert(not_expand_probs.count(tag));
-      assert(expand_probs.count(tag));
+      assert(!smart_expand || not_expand_probs.count(tag));
+      assert(!smart_expand || expand_probs.count(tag));
       if (node->IsSplitNode()) {
         prob_frag += smart_expand ? not_expand_probs[tag] : prob_not_expand;
         ++vars;
