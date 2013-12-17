@@ -75,7 +75,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     }
 
     for (const auto& entry: split_counts) {
-      double expand_prob = entry.second * sqrt(entry.second) + 1;
+      double expand_prob = pow(entry.second, 1.8) + 1;
       expand_probs[entry.first] = -log(expand_prob);
       not_expand_probs[entry.first] = log((expand_prob - 1) / expand_prob);
     }
