@@ -15,8 +15,8 @@ RuleMatcher::RuleMatcher(const Grammar& grammar, const AlignedTree& tree) {
     }
   }
 
-  cerr << "Tree size: " << tree.size() << endl;
-  cerr << "Rule matcher size: " << matcher_size << " rules..." << endl;
+  // cerr << "Tree size: " << tree.size() << endl;
+  // cerr << "Rule matcher size: " << matcher_size << " rules..." << endl;
 }
 
 bool RuleMatcher::MatchRule(

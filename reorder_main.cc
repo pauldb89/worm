@@ -9,19 +9,18 @@
 #include "grammar.h"
 #include "multi_sample_reorderer.h"
 #include "rule_stats_reporter.h"
+#include "time_util.h"
 #include "viterbi_reorderer.h"
 
 using namespace std;
 using namespace chrono;
 namespace po = boost::program_options;
 
-typedef high_resolution_clock Clock;
-
 int main(int argc, char** argv) {
   po::options_description cmdline_specific("Command line options");
   cmdline_specific.add_options()
       ("help", "Show available options")
-      ("config", po::value<string>(), "Path to config file");
+      ("config,c", po::value<string>(), "Path to config file");
 
   po::options_description general_options("General options");
   general_options.add_options()
@@ -94,7 +93,7 @@ int main(int argc, char** argv) {
   }
 
   int sentence_index = 0;
-  Clock::time_point start_time = Clock::now();
+  auto start_time = GetTime();
   shared_ptr<RuleStatsReporter> reporter = make_shared<RuleStatsReporter>();
   vector<String> reorderings(input_trees.size());
   int num_threads = vm["threads"].as<int>();
@@ -115,18 +114,17 @@ int main(int argc, char** argv) {
           input_trees[i], grammar, reporter);
     }
 
-    Clock::time_point reordering_start = Clock::now();
+    // auto reordering_start = GetTime();
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
       reorderings[i] = String();
     } else {
       reorderings[i] = reorderer->ConstructReordering();
     }
-    Clock::time_point reordering_end = Clock::now();
-    double reordering_duration = duration_cast<milliseconds>(
-        reordering_end - reordering_start).count() / 1000.0;
-    cerr << "Time required to reorder sentence: " << reordering_duration
-         << " seconds..." << endl;
+    // auto reordering_end = GetTime();
+    // cerr << "Time required to reorder sentence: "
+    //      << GetDuration(reordering_start, reordering_end) << " seconds..."
+    //      << endl;
 
     #pragma omp critical
     {
@@ -139,10 +137,9 @@ int main(int argc, char** argv) {
       }
     }
   }
-  Clock::time_point stop_time = Clock::now();
-  auto duration = duration_cast<milliseconds>(stop_time - start_time).count();
+  auto stop_time = GetTime();
   cerr << endl << "Reordering " << reorderings.size() << " sentences took "
-       << duration / 1000.0 << " seconds..." << endl;
+       << GetDuration(start_time, stop_time) << " seconds..." << endl;
 
   cerr << "Writing reordered sentences..." << endl;
   for (String reordering: reorderings) {
