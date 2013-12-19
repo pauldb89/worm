@@ -138,13 +138,21 @@ int main(int argc, char** argv) {
       vm["max_links"].as<unsigned int>());
   auto start_time = GetTime();
   vector<Alignment> best_alignments(parse_trees.size());
+  int alignment_index = 0;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < best_alignments.size(); ++i) {
     best_alignments[i] = heuristic.FindBestAlignment(
         parse_trees[i], target_strings[i], gdfa_alignments[i],
         intersect_alignments[i]);
-    if (i % 100 == 0) {
-      cerr << i << endl;
+    #pragma omp critical
+    {
+      ++alignment_index;
+      if (alignment_index % 1000 == 0) {
+        cerr << ".";
+        if (alignment_index % 50000 == 0) {
+          cerr << " [" << alignment_index << "]" << endl;
+        }
+      }
     }
   }
   auto end_time = GetTime();
