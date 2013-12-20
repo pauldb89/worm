@@ -52,13 +52,13 @@ double TranslationTable::ComputeAverageLogProbability(
 
 double TranslationTable::GetProbability(
     int source_word, int target_word) const {
+  if (source_word == Dictionary::NULL_WORD_ID) {
+    return DEFAULT_NULL_PROB;
+  }
+
   auto result = table.find(make_pair(source_word, target_word));
   if (result != table.end()) {
     return result->second;
-  }
-
-  if (source_word == Dictionary::NULL_WORD_ID) {
-    return DEFAULT_NULL_PROB;
   }
 
   return 0;
