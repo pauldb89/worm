@@ -755,8 +755,9 @@ pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
 
 void Sampler::InferReorderings() {
   cerr << "Inferring reorderings..." << endl;
-  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  // #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < training->size(); ++i) {
+    cerr << i << endl;
     const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
 
@@ -820,10 +821,12 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
 }
 
 void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
-  unordered_map<int, map<Rule, int>> rule_counts;
-  unordered_map<int, map<Rule, double>> rule_probs;
-  // Do not parallelize.
-  for (auto instance: *training) {
+  vector<unordered_map<int, map<Rule, int>>> rule_counts(num_threads);
+  vector<unordered_map<int, map<Rule, double>>> rule_probs(num_threads);
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  for (size_t i = 0; i < training->size(); ++i) {
+    int thread_id = omp_get_thread_num();
+    const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
 
     // Ignore parse failures.
@@ -835,8 +838,23 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
         Rule rule = GetRule(instance, node);
-        ++rule_counts[node->GetTag()][rule];
-        rule_probs[node->GetTag()][rule] = exp(ComputeLogProbability(rule));
+        ++rule_counts[thread_id][node->GetTag()][rule];
+        rule_probs[thread_id][node->GetTag()][rule] = exp(ComputeLogProbability(rule));
+      }
+    }
+  }
+
+  unordered_map<int, map<Rule, int>> aggregate_counts;
+  unordered_map<int, map<Rule, double>> aggregate_probs;
+  for (int i = 0; i < num_threads; ++i) {
+    for (const auto& tag_entry: rule_counts[i]) {
+      for (const auto& entry: tag_entry.second) {
+        aggregate_counts[tag_entry.first][entry.first] += entry.second;
+      }
+    }
+    for (const auto& tag_entry: rule_probs[i]) {
+      for (const auto& entry: tag_entry.second) {
+        aggregate_probs[tag_entry.first][entry.first] = entry.second;
       }
     }
   }
@@ -844,7 +862,7 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
   ofstream gout(output_prefix + ".grammar");
   ofstream fwd_out(output_prefix + ".fwd");
   ofstream rev_out(output_prefix + ".rev");
-  for (const auto& entry: rule_counts) {
+  for (const auto& entry: aggregate_counts) {
     double total_rule_count = 0;
     for (const auto& rule_entry: entry.second) {
       if (rule_entry.second >= min_rule_count) {
@@ -857,7 +875,7 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
       if (rule_entry.second >= min_rule_count) {
         double rule_prob = 0;
         if (min_rule_count == 0) {
-          rule_prob = rule_probs[entry.first][rule_entry.first];
+          rule_prob = aggregate_probs[entry.first][rule_entry.first];
         } else {
           rule_prob = rule_entry.second / total_rule_count;
         }
