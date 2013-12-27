@@ -757,7 +757,6 @@ void Sampler::InferReorderings() {
   cerr << "Inferring reorderings..." << endl;
   // #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < training->size(); ++i) {
-    cerr << i << endl;
     const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
 
