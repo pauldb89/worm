@@ -144,6 +144,8 @@ void ConstructGHKMDerivation(AlignedTree& tree,
   vector<pair<int, int>> backward_links(target_size, make_pair(source_size, 0));
   for (auto link: alignment) {
     int x = link.first, y = link.second;
+    assert(0 <= x && x < source_size);
+    assert(0 <= y && y < target_size);
     forward_links[x].first = min(forward_links[x].first, y);
     forward_links[x].second = max(forward_links[x].second, y + 1);
     backward_links[y].first = min(backward_links[y].first, x);
