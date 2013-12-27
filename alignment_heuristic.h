@@ -36,6 +36,8 @@ class AlignmentHeuristic {
 
   double GetInteriorNodesRatio(const AlignedTree& tree) const;
 
+  const static int MAX_STATES = 1 << 15;
+
   shared_ptr<TranslationTable> forward_table, reverse_table;
   unordered_set<int> blacklisted_tags;
   size_t max_additional_links;
