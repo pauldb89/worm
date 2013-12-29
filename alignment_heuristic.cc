@@ -7,6 +7,7 @@
 #include "util.h"
 
 typedef boost::hash<pair<int, int>> PairHasher;
+typedef pair<double, pair<int, size_t>> State;
 
 AlignmentHeuristic::AlignmentHeuristic(
     shared_ptr<TranslationTable> forward_table,
@@ -70,7 +71,7 @@ Alignment AlignmentHeuristic::GetAdditionalLinks(
   sort(candidates.begin(), candidates.end(),
       greater<pair<double, pair<int, int>>>());
   Alignment additional_links;
-  for (size_t i = 0; i < min(candidates.size(), max_additional_links); ++i) {
+  for (size_t i = 0; i < candidates.size(); ++i) {
     additional_links.push_back(candidates[i].second);
   }
 
@@ -105,20 +106,42 @@ Alignment AlignmentHeuristic::FindBestAlignment(
   ConstructGHKMDerivation(tree, target_string, base_alignment);
   double best_ratio = GetInteriorNodesRatio(tree);
 
-  for (int i = 1; i < 1 << additional_links.size(); ++i) {
+  int num_states = 0;
+  priority_queue<State, vector<State>, greater<State>> states;
+  states.push(make_pair(best_ratio, make_pair(0, 0)));
+  while (states.size() > 0 && num_states < MAX_STATES) {
+    ++num_states;
+    auto state = states.top();
+    states.pop();
+
+    double current_ratio = state.first;
+    int encoding = state.second.first;
+    size_t index = state.second.second;
+
+    if (index == additional_links.size()) {
+      continue;
+    }
+
+    states.push(make_pair(current_ratio, make_pair(encoding, index + 1)));
+
+    int new_encoding = encoding | (1 << index);
     Alignment alignment = base_alignment;
-    for (size_t j = 0; j < additional_links.size(); ++j) {
-      if (i & (1 << j)) {
-        alignment.push_back(additional_links[j]);
+    for (size_t i = 0; i < index; ++i) {
+      if (encoding & (1 << i)) {
+        alignment.push_back(additional_links[i]);
       }
     }
 
     AlignedTree tree = parse_tree;
     ConstructGHKMDerivation(tree, target_string, alignment);
-    double ratio = GetInteriorNodesRatio(tree);
-    if (ratio < best_ratio) {
+    double new_ratio = GetInteriorNodesRatio(tree);
+    if (new_ratio <= current_ratio) {
+      states.push(make_pair(new_ratio, make_pair(new_encoding, index + 1)));
+    }
+
+    if (new_ratio < best_ratio) {
+      best_ratio = new_ratio;
       best_alignment = alignment;
-      best_ratio = ratio;
     }
   }
 
