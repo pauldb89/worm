@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #include "aligned_tree.h"
@@ -16,6 +17,7 @@
 
 using namespace std;
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
 
 int main(int argc, char **argv) {
   po::options_description cmdline_specific("Command line options");
@@ -166,24 +168,35 @@ int main(int argc, char **argv) {
     seed = time(NULL);
   }
   RandomGenerator generator(seed);
+  string output_directory = vm["output"].as<string>();
+  fs::path output_path(output_directory);
+  if (!fs::exists(output_path)) {
+    fs::create_directory(output_path);
+  } else {
+    cerr << "WARNING: Output directory " << output_directory
+         << " already exists!" << endl;
+  }
+  if (output_directory.back() != '/') {
+    output_directory = output_directory + "/";
+  }
   Sampler sampler(training, dictionary, pcfg_table, forward_table,
                   reverse_table, generator, num_threads, vm.count("stats"),
                   vm.count("smart_expand"), vm["min_rule_count"].as<int>(),
                   vm.count("reorder"), vm["penalty"].as<double>(),
                   vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>(),
                   vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
-                  vm["pchild"].as<double>(), vm["pterm"].as<double>());
-  string prefix = vm["output"].as<string>();
-  sampler.Sample(prefix, vm["iterations"].as<int>(), vm["log_freq"].as<int>());
+                  vm["pchild"].as<double>(), vm["pterm"].as<double>(),
+                  output_directory);
+  sampler.Sample(vm["iterations"].as<int>(), vm["log_freq"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
-  sampler.SerializeGrammar(prefix, vm.count("scfg"));
+  sampler.SerializeGrammar(vm.count("scfg"));
   if (vm.count("align")) {
-    sampler.SerializeAlignments(prefix);
+    sampler.SerializeAlignments();
   }
   if (vm.count("reorder")) {
-    sampler.SerializeReorderings(prefix);
+    sampler.SerializeReorderings();
   }
   cerr << "Done..." << endl;
 

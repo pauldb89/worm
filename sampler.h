@@ -27,15 +27,16 @@ class Sampler {
           RandomGenerator& generator, int num_threads, bool enable_all_stats,
           bool smart_expand, int min_rule_count, bool reorder, double penalty,
           int max_leaves, int max_tree_size, double alpha,
-          double pexpand, double pchild, double pterm);
+          double pexpand, double pchild, double pterm,
+          const string& output_directory);
 
-  void Sample(const string& output_prefix, int iterations, int log_frequency);
+  void Sample(int iterations, int log_frequency);
 
-  void SerializeAlignments(const string& output_prefix);
+  void SerializeAlignments(const string& iteration = "");
 
-  void SerializeGrammar(const string& output_prefix, bool scfg_format);
+  void SerializeGrammar(bool scfg_format, const string& iteration = "");
 
-  void SerializeReorderings(const string& output_prefix);
+  void SerializeReorderings(const string& iteration = "");
 
  private:
   void InitializeRuleCounts();
@@ -91,6 +92,9 @@ class Sampler {
                          const NodeIter& node,
                          String& reordering);
 
+  string GetOutputFilename(
+      const string& iteration, const string& extension) const;
+
   shared_ptr<vector<Instance>> training;
   DistributedRuleCounts counts;
 
@@ -118,6 +122,8 @@ class Sampler {
   double prob_stop_child, prob_cont_child;
   double prob_stop_str, prob_cont_str;
   double prob_nt, prob_st, prob_tt;
+
+  string output_directory;
 };
 
 #endif

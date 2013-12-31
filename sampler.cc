@@ -1,17 +1,14 @@
 #include "sampler.h"
 
-#include <chrono>
+#include <algorithm>
 
+#include <boost/algorithm/string/join.hpp>
 #include <omp.h>
 
 #include "node.h"
 #include "pcfg_table.h"
 #include "time_util.h"
 #include "translation_table.h"
-
-using namespace chrono;
-
-typedef high_resolution_clock Clock;
 
 Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  Dictionary& dictionary,
@@ -22,7 +19,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  bool enable_all_stats, bool smart_expand,
                  int min_rule_count, bool reorder, double penalty,
                  int max_leaves, int max_tree_size, double alpha,
-                 double pexpand, double pchild, double pterm) :
+                 double pexpand, double pchild, double pterm,
+                 const string& output_directory) :
     training(training),
     counts(num_threads, alpha),
     dictionary(dictionary),
@@ -44,7 +42,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     prob_stop_child(log(pchild)),
     prob_cont_child(log(1 - pchild)),
     prob_stop_str(log(pterm)),
-    prob_cont_str(log(1 - pterm)) {
+    prob_cont_str(log(1 - pterm)),
+    output_directory(output_directory) {
   set<int> non_terminals, source_terminals, target_terminals;
   // Do not parallelize.
   for (auto instance: *training) {
@@ -86,20 +85,20 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
   prob_tt = -log(target_terminals.size());
 }
 
-void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
+void Sampler::Sample(int iterations, int log_frequency) {
   InitializeRuleCounts();
 
   counts.Synchronize();
 
   for (int iter = 0; iter < iterations; ++iter) {
-    auto start_time = Clock::now();
+    auto start_time = GetTime();
     DisplayStats();
 
     if (iter % log_frequency == 0) {
       cerr << "Serializing the grammar..." << endl;
-      SerializeGrammar(prefix + "." + to_string(iter), false);
+      SerializeGrammar(false, to_string(iter));
       if (reorder) {
-        SerializeReorderings(prefix + "." + to_string(iter));
+        SerializeReorderings(to_string(iter));
       }
       cerr << "Done..." << endl;
     }
@@ -126,7 +125,7 @@ void Sampler::Sample(const string& prefix, int iterations, int log_frequency) {
       InferReorderings();
     }
 
-    auto end_time = Clock::now();
+    auto end_time = GetTime();
     cout << "Iteration " << iter << " completed in "
          << GetDuration(start_time, end_time) << " seconds" << endl;
   }
@@ -168,7 +167,7 @@ void Sampler::CacheSentence(const Instance& instance) {
 }
 
 void Sampler::DisplayStats() {
-  auto start_time = Clock::now();
+  auto start_time = GetTime();
   cout << "Log-likelihood: " << fixed << ComputeDataLikelihood() << endl;
   if (enable_all_stats) {
     cout << "\tAverage number of interior nodes: "
@@ -182,7 +181,7 @@ void Sampler::DisplayStats() {
     }
     cout << endl;
   }
-  auto end_time = Clock::now();
+  auto end_time = GetTime();
   cerr << "Computing stats took: " << GetDuration(start_time, end_time)
        << " seconds..." << endl;
 }
@@ -773,9 +772,16 @@ void Sampler::InferReorderings() {
   cerr << "Done..." << endl;
 }
 
-void Sampler::SerializeAlignments(const string& output_prefix) {
-  ofstream fwd_out(output_prefix + ".fwd_align");
-  ofstream rev_out(output_prefix + ".rev_align");
+string Sampler::GetOutputFilename(
+    const string& iteration, const string& extension) const {
+  vector<string> items = {output_directory + "output", iteration, extension};
+  items.erase(remove(items.begin(), items.end(), ""), items.end());
+  return boost::algorithm::join(items, ".");
+}
+
+void Sampler::SerializeAlignments(const string& iteration) {
+  ofstream fwd_out(GetOutputFilename(iteration, "fwd_align"));
+  ofstream rev_out(GetOutputFilename(iteration, "rev_align"));
   // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
@@ -819,7 +825,7 @@ void Sampler::SerializeAlignments(const string& output_prefix) {
   }
 }
 
-void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
+void Sampler::SerializeGrammar(bool scfg_format, const string& iteration) {
   vector<unordered_map<int, map<Rule, int>>> rule_counts(num_threads);
   vector<unordered_map<int, map<Rule, double>>> rule_probs(num_threads);
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
@@ -858,9 +864,9 @@ void Sampler::SerializeGrammar(const string& output_prefix, bool scfg_format) {
     }
   }
 
-  ofstream gout(output_prefix + ".grammar");
-  ofstream fwd_out(output_prefix + ".fwd");
-  ofstream rev_out(output_prefix + ".rev");
+  ofstream gout(GetOutputFilename(iteration, "grammar"));
+  ofstream fwd_out(GetOutputFilename(iteration, "fwd"));
+  ofstream rev_out(GetOutputFilename(iteration, "rev"));
   for (const auto& entry: aggregate_counts) {
     double total_rule_count = 0;
     for (const auto& rule_entry: entry.second) {
@@ -915,9 +921,9 @@ void Sampler::ExtractReordering(
   }
 }
 
-void Sampler::SerializeReorderings(const string& output_prefix) {
-  ofstream out(output_prefix + ".reorder");
-  ofstream dump_out(output_prefix + ".dump");
+void Sampler::SerializeReorderings(const string& iteration) {
+  ofstream out(GetOutputFilename(iteration, "reorder"));
+  ofstream dump_out(GetOutputFilename(iteration, "dump"));
 
   for (const auto& counts: reorder_counts) {
     dump_out << counts.size() << "\n";
