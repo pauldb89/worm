@@ -38,6 +38,8 @@ class Sampler {
 
   void SerializeReorderings(const string& iteration = "");
 
+  void SerializeInternalState(const string& iteration = "");
+
  private:
   void InitializeRuleCounts();
 

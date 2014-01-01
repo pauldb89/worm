@@ -94,6 +94,7 @@ void Sampler::Sample(int iterations, int log_frequency) {
     auto start_time = GetTime();
     DisplayStats();
 
+    SerializeInternalState(to_string(iter));
     if (iter % log_frequency == 0) {
       cerr << "Serializing the grammar..." << endl;
       SerializeGrammar(false, to_string(iter));
@@ -943,4 +944,23 @@ void Sampler::SerializeReorderings(const string& iteration) {
     WriteTargetString(out, best_reordering, dictionary);
     out << "\n";
   }
+}
+
+void Sampler::SerializeInternalState(const string& iteration) {
+  cerr << "Serializing internal state..." << endl;
+  auto start_time = GetTime();
+
+  ofstream out(GetOutputFilename(iteration, "internal"));
+  for (size_t i = 0; i < training->size(); ++i) {
+    out << "####### Tree: " << i << " #######" << endl;
+    for (auto node: (*training)[i].first) {
+      auto span = node.GetSpan();
+      out << dictionary.GetToken(node.GetTag()) << " " << span.first << " "
+          << span.second << endl;
+    }
+  }
+
+  auto end_time = GetTime();
+  cerr << "Internal state serialized in " << GetDuration(start_time, end_time)
+       << " seconds..." << endl;
 }

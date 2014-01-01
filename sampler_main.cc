@@ -192,6 +192,7 @@ int main(int argc, char **argv) {
 
   cerr << "Writing output files..." << endl;
   sampler.SerializeGrammar(vm.count("scfg"));
+  sampler.SerializeInternalState();
   if (vm.count("align")) {
     sampler.SerializeAlignments();
   }
