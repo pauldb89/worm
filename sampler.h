@@ -6,8 +6,10 @@
 #include <unordered_map>
 
 #include "aligned_tree.h"
+#include "alignment_constructor.h"
 #include "dictionary.h"
 #include "distributed_rule_counts.h"
+#include "rule_extractor.h"
 #include "rule_reorderer.h"
 #include "util.h"
 
@@ -61,11 +63,6 @@ class Sampler {
 
   vector<NodeIter> GetRandomSchedule(const AlignedTree& tree);
 
-  Rule GetRule(const Instance& instance, const NodeIter& node);
-
-  String ConstructRuleTargetSide(const AlignedTree& fragment,
-                                 const String& target_string);
-
   vector<pair<int, int>> GetLegalSpans(const AlignedTree& tree,
                                        const NodeIter& node,
                                        const NodeIter& ancestor);
@@ -82,23 +79,16 @@ class Sampler {
 
   void DecrementRuleCount(const Rule& rule);
 
-  Alignment ConstructNonterminalLinks(const Rule& rule);
-
-  pair<Alignment, Alignment> ConstructTerminalLinks(const Rule& rule);
-
-  pair<Alignment, Alignment> ConstructAlignments(const Rule& rule);
-
   void InferReorderings();
 
   void ExtractReordering(const Instance& instance,
                          const NodeIter& node,
                          String& reordering);
 
-  string GetOutputFilename(
-      const string& iteration, const string& extension) const;
-
   shared_ptr<vector<Instance>> training;
   DistributedRuleCounts counts;
+  RuleExtractor extractor;
+  AlignmentConstructor alignment_constructor;
 
   Dictionary& dictionary;
   shared_ptr<PCFGTable> pcfg_table;

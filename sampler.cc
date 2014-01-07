@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include <boost/algorithm/string/join.hpp>
 #include <omp.h>
 
 #include "node.h"
@@ -23,6 +22,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
                  const string& output_directory) :
     training(training),
     counts(num_threads, alpha),
+    alignment_constructor(forward_table, reverse_table),
     dictionary(dictionary),
     pcfg_table(pcfg_table),
     forward_table(forward_table),
@@ -140,7 +140,7 @@ void Sampler::InitializeRuleCounts() {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        IncrementRuleCount(GetRule(instance, node));
+        IncrementRuleCount(extractor.ExtractRule(instance, node));
       }
     }
   }
@@ -202,7 +202,7 @@ double Sampler::ComputeDataLikelihood() {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        const Rule& rule = GetRule(instance, node);
+        const Rule& rule = extractor.ExtractRule(instance, node);
         double prob = ComputeLogBaseProbability(rule);
         likelihoods[thread_id] += new_counts.GetLogProbability(rule, prob);
         new_counts.Increment(rule);
@@ -252,7 +252,7 @@ int Sampler::GetGrammarSize() {
     const AlignedTree& tree = instance.first;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        grammars[thread_id].insert(GetRule(instance, node));
+        grammars[thread_id].insert(extractor.ExtractRule(instance, node));
       }
     }
   }
@@ -307,24 +307,25 @@ void Sampler::SampleAlignments(const Instance& instance, int index) {
     auto ancestor = tree.GetSplitAncestor(node);
 
     // Decrement existing rule counts.
-    DecrementRuleCount(GetRule(instance, ancestor));
+    DecrementRuleCount(extractor.ExtractRule(instance, ancestor));
     if (node->IsSplitNode()) {
-      DecrementRuleCount(GetRule(instance, node));
+      DecrementRuleCount(extractor.ExtractRule(instance, node));
     }
 
     vector<double> probs;
     // Compute probability for not splitting the node (single rule).
     node->SetSplitNode(false);
     node->SetSpan(make_pair(-1, -1));
-    probs.push_back(ComputeLogProbability(GetRule(instance, ancestor)));
+    const Rule& monolithic_rule = extractor.ExtractRule(instance, ancestor);
+    probs.push_back(ComputeLogProbability(monolithic_rule));
 
     // Find possible alignment spans and compute the probability for each one.
     node->SetSplitNode(true);
     auto legal_spans = GetLegalSpans(tree, node, ancestor);
     for (auto span: legal_spans) {
       node->SetSpan(span);
-      const Rule& ancestor_rule = GetRule(instance, ancestor);
-      const Rule& node_rule = GetRule(instance, node);
+      const Rule& ancestor_rule = extractor.ExtractRule(instance, ancestor);
+      const Rule& node_rule = extractor.ExtractRule(instance, node);
       probs.push_back(ComputeLogProbability(ancestor_rule, node_rule));
     }
 
@@ -345,7 +346,7 @@ void Sampler::SampleAlignments(const Instance& instance, int index) {
     if (value <= probs[0]) {
       node->SetSplitNode(false);
       node->SetSpan(make_pair(-1, -1));
-      IncrementRuleCount(GetRule(instance, ancestor));
+      IncrementRuleCount(extractor.ExtractRule(instance, ancestor));
       continue;
     } else {
       node->SetSplitNode(true);
@@ -356,8 +357,8 @@ void Sampler::SampleAlignments(const Instance& instance, int index) {
     for (size_t i = 1; i < probs.size(); ++i) {
       if (value <= probs[i]) {
         node->SetSpan(legal_spans[i - 1]);
-        IncrementRuleCount(GetRule(instance, ancestor));
-        IncrementRuleCount(GetRule(instance, node));
+        IncrementRuleCount(extractor.ExtractRule(instance, ancestor));
+        IncrementRuleCount(extractor.ExtractRule(instance, node));
         sampled = true;
         break;
       }
@@ -396,9 +397,9 @@ void Sampler::SampleSwaps(const Instance& instance) {
     random_shuffle(descendants.begin(), descendants.end());
     // Sample swaps for consecutive pairs of descendants.
     for (size_t i = 1; i < descendants.size(); i += 2) {
-      const Rule& rule1 = GetRule(instance, node);
-      const Rule& rule2 = GetRule(instance, descendants[i - 1]);
-      const Rule& rule3 = GetRule(instance, descendants[i]);
+      const Rule& rule1 = extractor.ExtractRule(instance, node);
+      const Rule& rule2 = extractor.ExtractRule(instance, descendants[i - 1]);
+      const Rule& rule3 = extractor.ExtractRule(instance, descendants[i]);
       DecrementRuleCount(rule1);
       DecrementRuleCount(rule2);
       DecrementRuleCount(rule3);
@@ -411,9 +412,9 @@ void Sampler::SampleSwaps(const Instance& instance) {
       descendants[i - 1]->SetSpan(span2);
       descendants[i]->SetSpan(span1);
 
-      const Rule& srule1 = GetRule(instance, node);
-      const Rule& srule2 = GetRule(instance, descendants[i - 1]);
-      const Rule& srule3 = GetRule(instance, descendants[i]);
+      const Rule& srule1 = extractor.ExtractRule(instance, node);
+      const Rule& srule2 = extractor.ExtractRule(instance, descendants[i - 1]);
+      const Rule& srule3 = extractor.ExtractRule(instance, descendants[i]);
 
       double prob_swap = ComputeLogProbability(srule1, srule2, srule3);
 
@@ -451,39 +452,6 @@ vector<NodeIter> Sampler::GetRandomSchedule(const AlignedTree& tree) {
 
   random_shuffle(schedule.begin(), schedule.end());
   return schedule;
-}
-
-Rule Sampler::GetRule(const Instance& instance, const NodeIter& node) {
-  AlignedTree fragment = instance.first.GetFragment(node);
-  String target_string = ConstructRuleTargetSide(fragment, instance.second);
-  return make_pair(fragment, target_string);
-}
-
-String Sampler::ConstructRuleTargetSide(const AlignedTree& fragment,
-                                        const String& target_string) {
-  pair<int, int> root_span = fragment.begin()->GetSpan();
-  vector<int> frontier(root_span.second, -1);
-  int num_split_leaves = 0;
-  for (auto leaf = fragment.begin_leaf(); leaf != fragment.end_leaf(); ++leaf) {
-    if (leaf != fragment.begin() && leaf->IsSplitNode()) {
-      pair<int, int> span = leaf->GetSpan();
-      for (int j = span.first; j < span.second; ++j) {
-        frontier[j] = num_split_leaves;
-      }
-      ++num_split_leaves;
-    }
-  }
-
-  String result;
-  for (int i = root_span.first; i < root_span.second; ++i) {
-    if (frontier[i] == -1) {
-      result.push_back(target_string[i]);
-    } else if (result.empty() || result.back().GetVarIndex() != frontier[i]) {
-      result.push_back(StringNode(-1, -1, frontier[i]));
-    }
-  }
-
-  return result;
 }
 
 vector<pair<int, int>> Sampler::GetLegalSpans(const AlignedTree& tree,
@@ -650,112 +618,9 @@ void Sampler::DecrementRuleCount(const Rule& rule) {
   counts.Decrement(rule);
 }
 
-Alignment Sampler::ConstructNonterminalLinks(const Rule& rule) {
-  const AlignedTree& frag = rule.first;
-  const String& target_string = rule.second;
-
-  Alignment alignment;
-  int leaf_index = 0, var_index = 0;
-  for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-    if (leaf->IsSplitNode() && leaf != frag.begin()) {
-      for (size_t i = 0; i < target_string.size(); ++i) {
-        if (target_string[i].GetVarIndex() == var_index) {
-          alignment.push_back(make_pair(leaf_index, i));
-          break;
-        }
-      }
-      ++var_index;
-    }
-    ++leaf_index;
-  }
-
-  return alignment;
-}
-
-pair<Alignment, Alignment> Sampler::ConstructTerminalLinks(const Rule& rule) {
-  const AlignedTree& frag = rule.first;
-  const String& target_string = rule.second;
-
-  Alignment forward_alignment;
-  for (size_t i = 0; i < target_string.size(); ++i) {
-    if (!target_string[i].IsSetWord()) {
-      continue;
-    }
-
-    int target_word = target_string[i].GetWord(), leaf_index = 0;
-    double best_match = forward_table->GetProbability(
-        dictionary.NULL_WORD_ID, target_word);
-    int best_index = -1;
-    for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-      if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
-        double match_prob = forward_table->GetProbability(
-            leaf->GetWord(), target_word);
-        if (match_prob > best_match) {
-          best_match = match_prob;
-          best_index = leaf_index;
-        }
-      }
-
-      ++leaf_index;
-    }
-
-    if (best_index >= 0) {
-      forward_alignment.push_back(make_pair(best_index, i));
-    }
-  }
-
-  Alignment reverse_alignment;
-  int leaf_index = 0;
-  for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-    if (leaf->IsSetWord() && (!leaf->IsSplitNode() || leaf == frag.begin())) {
-      int source_word = leaf->GetWord();
-      double best_match = reverse_table->GetProbability(
-          dictionary.NULL_WORD_ID, source_word);
-      int best_index = -1;
-      for (size_t i = 0; i < target_string.size(); ++i) {
-        if (!target_string[i].IsSetWord()) {
-          continue;
-        }
-
-        double match_prob = reverse_table->GetProbability(
-            target_string[i].GetWord(), source_word);
-        if (match_prob > best_match) {
-          best_match = match_prob;
-          best_index = i;
-        }
-      }
-
-      if (best_index >= 0) {
-        reverse_alignment.push_back(make_pair(leaf_index, best_index));
-      }
-    }
-    ++leaf_index;
-  }
-
-  return make_pair(forward_alignment, reverse_alignment);
-}
-
-pair<Alignment, Alignment> Sampler::ConstructAlignments(const Rule& rule) {
-  Alignment forward_alignment, reverse_alignment;
-
-  auto nonterminal_links = ConstructNonterminalLinks(rule);
-  copy(nonterminal_links.begin(), nonterminal_links.end(),
-       back_inserter(forward_alignment));
-  copy(nonterminal_links.begin(), nonterminal_links.end(),
-       back_inserter(reverse_alignment));
-
-  auto terminal_links = ConstructTerminalLinks(rule);
-  copy(terminal_links.first.begin(), terminal_links.first.end(),
-       back_inserter(forward_alignment));
-  copy(terminal_links.second.begin(), terminal_links.second.end(),
-       back_inserter(reverse_alignment));
-
-  return make_pair(forward_alignment, reverse_alignment);
-}
-
 void Sampler::InferReorderings() {
   cerr << "Inferring reorderings..." << endl;
-  // #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < training->size(); ++i) {
     const Instance& instance = (*training)[i];
     const AlignedTree& tree = instance.first;
@@ -773,16 +638,9 @@ void Sampler::InferReorderings() {
   cerr << "Done..." << endl;
 }
 
-string Sampler::GetOutputFilename(
-    const string& iteration, const string& extension) const {
-  vector<string> items = {output_directory + "output", iteration, extension};
-  items.erase(remove(items.begin(), items.end(), ""), items.end());
-  return boost::algorithm::join(items, ".");
-}
-
 void Sampler::SerializeAlignments(const string& iteration) {
-  ofstream fwd_out(GetOutputFilename(iteration, "fwd_align"));
-  ofstream rev_out(GetOutputFilename(iteration, "rev_align"));
+  ofstream fwd_out(GetOutputFilename(output_directory, iteration, "fwd_align"));
+  ofstream rev_out(GetOutputFilename(output_directory, iteration, "rev_align"));
   // Do not parallelize.
   for (auto instance: *training) {
     const AlignedTree& tree = instance.first;
@@ -796,11 +654,11 @@ void Sampler::SerializeAlignments(const string& iteration) {
     Alignment forward_alignment, reverse_alignment;
     for (auto node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        const Rule& rule = GetRule(instance, node);
+        const Rule& rule = extractor.ExtractRule(instance, node);
         const AlignedTree& frag = rule.first;
         const String& target_string = rule.second;
 
-        auto subalignments = ConstructTerminalLinks(rule);
+        auto subalignments = alignment_constructor.ConstructTerminalLinks(rule);
 
         vector<NodeIter> leaves;
         for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
@@ -843,7 +701,7 @@ void Sampler::SerializeGrammar(bool scfg_format, const string& iteration) {
     CacheSentence(instance);
     for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
       if (node->IsSplitNode()) {
-        Rule rule = GetRule(instance, node);
+        Rule rule = extractor.ExtractRule(instance, node);
         ++rule_counts[thread_id][node->GetTag()][rule];
         rule_probs[thread_id][node->GetTag()][rule] = exp(ComputeLogProbability(rule));
       }
@@ -865,9 +723,9 @@ void Sampler::SerializeGrammar(bool scfg_format, const string& iteration) {
     }
   }
 
-  ofstream gout(GetOutputFilename(iteration, "grammar"));
-  ofstream fwd_out(GetOutputFilename(iteration, "fwd"));
-  ofstream rev_out(GetOutputFilename(iteration, "rev"));
+  ofstream gout(GetOutputFilename(output_directory, iteration, "grammar"));
+  ofstream fwd_out(GetOutputFilename(output_directory, iteration, "fwd"));
+  ofstream rev_out(GetOutputFilename(output_directory, iteration, "rev"));
   for (const auto& entry: aggregate_counts) {
     double total_rule_count = 0;
     for (const auto& rule_entry: entry.second) {
@@ -898,7 +756,7 @@ void Sampler::SerializeGrammar(bool scfg_format, const string& iteration) {
       }
       gout << "||| " << rule.first << "\n";
 
-      auto alignments = ConstructAlignments(rule.second);
+      auto alignments = alignment_constructor.ConstructAlignments(rule.second);
       fwd_out << alignments.first << "\n";
       rev_out << alignments.second << "\n";
     }
@@ -907,8 +765,8 @@ void Sampler::SerializeGrammar(bool scfg_format, const string& iteration) {
 
 void Sampler::ExtractReordering(
     const Instance& instance, const NodeIter& node, String& reordering) {
-  const Rule& rule = GetRule(instance, node);
-  const auto& alignment = ConstructAlignments(rule).first;
+  const Rule& rule = extractor.ExtractRule(instance, node);
+  const auto& alignment = alignment_constructor.ConstructAlignments(rule).first;
 
   const auto& frontier = instance.first.GetSplitDescendants(node);
   const auto& reorder_frontier = rule_reorderer.Reorder(rule.first, alignment);
@@ -923,8 +781,8 @@ void Sampler::ExtractReordering(
 }
 
 void Sampler::SerializeReorderings(const string& iteration) {
-  ofstream out(GetOutputFilename(iteration, "reorder"));
-  ofstream dump_out(GetOutputFilename(iteration, "dump"));
+  ofstream out(GetOutputFilename(output_directory, iteration, "reorder"));
+  ofstream dump_out(GetOutputFilename(output_directory, iteration, "dump"));
 
   for (const auto& counts: reorder_counts) {
     dump_out << counts.size() << "\n";
@@ -950,13 +808,13 @@ void Sampler::SerializeInternalState(const string& iteration) {
   cerr << "Serializing internal state..." << endl;
   auto start_time = GetTime();
 
-  ofstream out(GetOutputFilename(iteration, "internal"));
+  ofstream out(GetOutputFilename(output_directory, iteration, "internal"));
   for (size_t i = 0; i < training->size(); ++i) {
-    out << "####### Tree: " << i << " #######" << endl;
+    out << "####### Tree: " << i << " #######" << "\n";
     for (auto node: (*training)[i].first) {
       auto span = node.GetSpan();
       out << dictionary.GetToken(node.GetTag()) << " " << span.first << " "
-          << span.second << endl;
+          << span.second << "\n";
     }
   }
 

@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_set>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/regex.hpp>
 
 #include "aligned_tree.h"
@@ -37,7 +38,7 @@ AlignedTree ReadParseTree(istream& tree_stream, Dictionary& dictionary) {
     // We need to careful with "(" and ")" symbols in the original sentence.
     // (That's why we have complicated checks for entering and leaving a
     // subtree.)
-    if (*it == "(" && *next(it) != ")") {
+    if (*it == "(" && *boost::next(it) != ")") {
       // Create an empty node and add it to the stack (enter subtree).
       if (st.empty()) {
         // Create root node.
@@ -130,6 +131,24 @@ istream& operator>>(istream& in, Alignment& alignment) {
 
   return in;
 }
+
+void ReadInternalStructure(
+    istream& in, AlignedTree& tree, Dictionary& dictionary, int tree_index) {
+  string header;
+  getline(in, header);
+  assert(header == "####### Tree: " + to_string(tree_index) + " #######");
+
+  for (auto& node: tree) {
+    string tag;
+    pair<int, int> span;
+    in >> tag >> span.first >> span.second;
+
+    assert(tag == dictionary.GetToken(node.GetTag()));
+    node.SetSplitNode(span.first != -1 && span.second != -1);
+    node.SetSpan(span);
+  }
+}
+
 
 void ConstructGHKMDerivation(AlignedTree& tree,
                              const String& target_string,
@@ -238,3 +257,14 @@ ostream& operator<<(ostream& out, const Alignment& alignment) {
   }
   return out;
 }
+
+string GetOutputFilename(
+    const string& output_directory,
+    const string& extension,
+    const string& iteration) {
+  vector<string> items = {output_directory + "output", iteration, extension};
+  items.erase(remove(items.begin(), items.end(), ""), items.end());
+  return boost::algorithm::join(items, ".");
+}
+
+

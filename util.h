@@ -26,6 +26,9 @@ pair<Rule, double> ReadRule(istream& grammar_stream, Dictionary& dictionary);
 
 istream& operator>>(istream& in, Alignment& alignment);
 
+void ReadInternalStructure(
+    istream& in, AlignedTree& tree, Dictionary& dictionary, int tree_index);
+
 void ConstructGHKMDerivation(AlignedTree& tree,
                              const String& target_string,
                              const Alignment& alignment);
@@ -39,5 +42,10 @@ void WriteSCFGRule(ostream& out, const Rule& rule, Dictionary& dictionary);
 void WriteSTSGRule(ostream& out, const Rule& rule, Dictionary& dictionary);
 
 ostream& operator<<(ostream& out, const Alignment& alignment);
+
+string GetOutputFilename(
+  const string& output_directory,
+  const string& extension,
+  const string& iteration = "");
 
 #endif
