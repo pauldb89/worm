@@ -651,36 +651,9 @@ void Sampler::SerializeAlignments(const string& iteration) {
       continue;
     }
 
-    Alignment forward_alignment, reverse_alignment;
-    for (auto node = tree.begin(); node != tree.end(); ++node) {
-      if (node->IsSplitNode()) {
-        const Rule& rule = extractor.ExtractRule(instance, node);
-        const AlignedTree& frag = rule.first;
-        const String& target_string = rule.second;
-
-        auto subalignments = alignment_constructor.ConstructTerminalLinks(rule);
-
-        vector<NodeIter> leaves;
-        for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
-          leaves.push_back(leaf);
-        }
-
-        for (auto link: subalignments.first) {
-          int source_index = leaves[link.first]->GetWordIndex();
-          int target_index = target_string[link.second].GetWordIndex();
-          forward_alignment.push_back(make_pair(source_index, target_index));
-        }
-
-        for (auto link: subalignments.second) {
-          int source_index = leaves[link.first]->GetWordIndex();
-          int target_index = target_string[link.second].GetWordIndex();
-          reverse_alignment.push_back(make_pair(source_index, target_index));
-        }
-      }
-    }
-
-    fwd_out << forward_alignment << "\n";
-    rev_out << reverse_alignment << "\n";
+    auto alignments = alignment_constructor.ExtractAlignments(instance);
+    fwd_out << alignments.first << "\n";
+    rev_out << alignments.second << "\n";
   }
 }
 

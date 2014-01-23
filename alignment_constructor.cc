@@ -8,6 +8,40 @@ AlignmentConstructor::AlignmentConstructor(
     shared_ptr<TranslationTable> reverse_table) :
     forward_table(forward_table), reverse_table(reverse_table) {}
 
+pair<Alignment, Alignment> AlignmentConstructor::ExtractAlignments(
+    const Instance& instance) {
+  Alignment forward_alignment, reverse_alignment;
+  const AlignedTree& tree = instance.first;
+  for (auto node = tree.begin(); node != tree.end(); ++node) {
+    if (node->IsSplitNode()) {
+      const Rule& rule = extractor.ExtractRule(instance, node);
+      const AlignedTree& frag = rule.first;
+      const String& target_string = rule.second;
+
+      auto subalignments = ConstructTerminalLinks(rule);
+
+      vector<NodeIter> leaves;
+      for (auto leaf = frag.begin_leaf(); leaf != frag.end_leaf(); ++leaf) {
+        leaves.push_back(leaf);
+      }
+
+      for (auto link: subalignments.first) {
+        int source_index = leaves[link.first]->GetWordIndex();
+        int target_index = target_string[link.second].GetWordIndex();
+        forward_alignment.push_back(make_pair(source_index, target_index));
+      }
+
+      for (auto link: subalignments.second) {
+        int source_index = leaves[link.first]->GetWordIndex();
+        int target_index = target_string[link.second].GetWordIndex();
+        reverse_alignment.push_back(make_pair(source_index, target_index));
+      }
+    }
+  }
+
+  return make_pair(forward_alignment, reverse_alignment);
+}
+
 pair<Alignment, Alignment> AlignmentConstructor::ConstructAlignments(
     const Rule& rule) {
   Alignment forward_alignment, reverse_alignment;
