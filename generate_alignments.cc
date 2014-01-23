@@ -25,8 +25,6 @@ int main(int argc, char** argv) {
           "File containing target strings")
       ("internal,i", po::value<string>()->required(),
           "File containing hidden alignment variables")
-      ("alpha", po::value<double>()->required(),
-          "Dirichlet process concentration parameter")
       ("output", po::value<string>()->required(), "Output directory")
       ("ibm1-source-vcb", po::value<string>()->required(),
           "Giza++ source vocabulary file")
