@@ -5,11 +5,15 @@
 #include <memory>
 #include <vector>
 
+#include <boost/program_options.hpp>
+
 #include "definitions.h"
 
 using namespace std;
+namespace po = boost::program_options;
 
 class Dictionary;
+class TranslationTable;
 
 Instance ConstructInstance(
     const AlignedTree& parse_tree,
@@ -47,5 +51,14 @@ string GetOutputFilename(
   const string& output_directory,
   const string& extension,
   const string& iteration = "");
+
+void LoadTranslationTables(
+    po::variables_map vm,
+    shared_ptr<TranslationTable>& forward_table,
+    shared_ptr<TranslationTable>& reverse_table,
+    Dictionary& Dictionary);
+
+vector<Instance> LoadInternalState(
+    po::variables_map vm, Dictionary& dictionary);
 
 #endif

@@ -98,24 +98,8 @@ int main(int argc, char **argv) {
   cerr << "Sampling with " << num_threads << " threads..." << endl;
 
   Dictionary dictionary;
-  cerr << "Reading monolingual dictionaries..." << endl;
   shared_ptr<TranslationTable> forward_table, reverse_table;
-  ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
-  Dictionary source_vocabulary(source_vcb_stream);
-  ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
-  Dictionary target_vocabulary(target_vcb_stream);
-  cerr << "Done..." << endl;
-
-  cerr << "Reading translation tables..." << endl;
-  ifstream forward_stream(vm["ibm1-forward"].as<string>());
-  forward_table = make_shared<TranslationTable>(
-      forward_stream, source_vocabulary, target_vocabulary, dictionary,
-      num_threads);
-  ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
-  reverse_table = make_shared<TranslationTable>(
-      reverse_stream, target_vocabulary, source_vocabulary, dictionary,
-      num_threads);
-  cerr << "Done..." << endl;
+  LoadTranslationTables(vm, forward_table, reverse_table, dictionary);
 
   cerr << "Reading parse trees..." << endl;
   vector<AlignedTree> parse_trees;

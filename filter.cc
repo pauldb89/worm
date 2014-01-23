@@ -69,55 +69,9 @@ int main(int argc, char** argv) {
   po::notify(vm);
 
   Dictionary dictionary;
-  cerr << "Reading monolingual dictionaries..." << endl;
   shared_ptr<TranslationTable> forward_table, reverse_table;
-  ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
-  Dictionary source_vocabulary(source_vcb_stream);
-  ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
-  Dictionary target_vocabulary(target_vcb_stream);
-  cerr << "Done..." << endl;
-
-  cerr << "Reading translation tables..." << endl;
-  ifstream forward_stream(vm["ibm1-forward"].as<string>());
-  forward_table = make_shared<TranslationTable>(
-      forward_stream, source_vocabulary, target_vocabulary, dictionary, 1);
-  ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
-  reverse_table = make_shared<TranslationTable>(
-      reverse_stream, target_vocabulary, source_vocabulary, dictionary, 1);
-  cerr << "Done..." << endl;
-
-
-  cerr << "Reading parse trees..." << endl;
-  vector<AlignedTree> parse_trees;
-  ifstream tree_stream(vm["trees"].as<string>());
-  while (!tree_stream.eof()) {
-    parse_trees.push_back(ReadParseTree(tree_stream, dictionary));
-    tree_stream >> ws;
-  }
-  cerr << "Done..." << endl;
-
-  cerr << "Reading target strings..." << endl;
-  vector<String> target_strings;
-  ifstream string_stream(vm["strings"].as<string>());
-  while (!string_stream.eof()) {
-    target_strings.push_back(ReadTargetString(string_stream, dictionary));
-    string_stream >> ws;
-  }
-  cerr << "Done..." << endl;
-
-  cerr << "Reading internal structure..." << endl;
-  ifstream internal_stream(vm["internal"].as<string>());
-  for (size_t i = 0; i < parse_trees.size(); ++i) {
-    ReadInternalStructure(internal_stream, parse_trees[i], dictionary, i);
-    internal_stream >> ws;
-  }
-  cerr << "Done..." << endl;
-
-  assert(parse_trees.size() == target_strings.size());
-  vector<Instance> training;
-  for (size_t i = 0; i < parse_trees.size(); ++i) {
-    training.push_back(make_pair(parse_trees[i], target_strings[i]));
-  }
+  LoadTranslationTables(vm, forward_table, reverse_table, dictionary);
+  vector<Instance> training = LoadInternalState(vm, dictionary);
 
   unordered_map<int, set<Rule>> rules;
   RuleExtractor extractor;
