@@ -33,3 +33,9 @@ set(filter_SRCS aligned_tree.cc alignment_constructor.cc dictionary.cc
     translation_table.cc util.cc)
 add_executable(filter ${filter_SRCS})
 target_link_libraries(filter ${Boost_LIBRARIES})
+
+set(generate_alignments_SRCS aligned_tree.cc alignment_constructor.cc
+    dictionary.cc generate_alignments.cc node.cc rule_extractor.cc
+    translation_table.cc util.cc)
+add_executable(generate_alignments ${generate_alignments_SRCS})
+target_link_libraries(generate_alignments ${Boost_LIBRARIES})
