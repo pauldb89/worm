@@ -94,8 +94,8 @@ void Sampler::Sample(int iterations, int log_frequency) {
     auto start_time = GetTime();
     DisplayStats();
 
-    SerializeInternalState(to_string(iter));
     if (iter % log_frequency == 0) {
+      SerializeInternalState(to_string(iter));
       cerr << "Serializing the grammar..." << endl;
       SerializeGrammar(false, to_string(iter));
       if (reorder) {
