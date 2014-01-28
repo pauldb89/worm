@@ -64,6 +64,8 @@ int main(int argc, char **argv) {
       ("seed", po::value<unsigned int>()->default_value(0)->required(),
           "Seed for random generator")
       ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
+      ("start_index", po::value<int>(), "Start index for sampling interval")
+      ("end_index", po::value<int>(), "End index for sampling interval")
       ("ibm1-source-vcb", po::value<string>()->required(),
           "Giza++ source vocabulary file")
       ("ibm1-target-vcb", po::value<string>()->required(),
@@ -171,7 +173,11 @@ int main(int argc, char **argv) {
                   vm["alpha"].as<double>(), vm["pexpand"].as<double>(),
                   vm["pchild"].as<double>(), vm["pterm"].as<double>(),
                   output_directory);
-  sampler.Sample(vm["iterations"].as<int>(), vm["log_freq"].as<int>());
+  int start_index = vm.count("start_index") ? vm["start_index"].as<int>() : 0;
+  int end_index = vm.count("end_index") ?
+      vm["end_index"].as<int>() : training->size();
+  sampler.Sample(vm["iterations"].as<int>(), vm["log_freq"].as<int>(),
+                 start_index, end_index);
   cerr << "Done..." << endl;
 
   cerr << "Writing output files..." << endl;
