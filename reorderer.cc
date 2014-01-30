@@ -5,7 +5,6 @@
 #include "grammar.h"
 #include "rule_stats_reporter.h"
 
-const double Reorderer::FAIL = -numeric_limits<double>::infinity();
 const double Reorderer::STOP = -1e6;
 
 Reorderer::Reorderer(
