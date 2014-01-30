@@ -32,7 +32,8 @@ class Sampler {
           double pexpand, double pchild, double pterm,
           const string& output_directory);
 
-  void Sample(int iterations, int log_frequency);
+  void Sample(int iterations, int log_frequency,
+              int start_index, int final_index);
 
   void SerializeAlignments(const string& iteration = "");
 

@@ -85,7 +85,8 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
   prob_tt = -log(target_terminals.size());
 }
 
-void Sampler::Sample(int iterations, int log_frequency) {
+void Sampler::Sample(int iterations, int log_frequency,
+                     int start_index, int end_index) {
   InitializeRuleCounts();
 
   counts.Synchronize();
@@ -104,8 +105,8 @@ void Sampler::Sample(int iterations, int log_frequency) {
       cerr << "Done..." << endl;
     }
 
-    vector<int> schedule(training->size());
-    iota(schedule.begin(), schedule.end(), 0);
+    vector<int> schedule(end_index - start_index);
+    iota(schedule.begin(), schedule.end(), start_index);
     random_shuffle(schedule.begin(), schedule.end());
     #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
     for (size_t i = 0; i < schedule.size(); ++i) {

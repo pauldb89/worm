@@ -51,7 +51,7 @@ String RuleReorderer::Reorder(
         int other_bits = 0;
         double cost = min_cost[state ^ (1 << i)];
         for (int j = 0; j < source_size; ++j) {
-          if (i != j && state & (1 << j)) {
+          if (i != j && (state & (1 << j))) {
             ++other_bits;
             cost += crossing_alignments[j][i];
           }
