@@ -131,6 +131,9 @@ void Sampler::Sample(int iterations, int log_frequency,
          << GetDuration(start_time, end_time) << " seconds" << endl;
   }
   DisplayStats();
+  if (reorder) {
+    InferReorderings();
+  }
 }
 
 void Sampler::InitializeRuleCounts() {
