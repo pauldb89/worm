@@ -94,6 +94,9 @@ void Sampler::Sample(int iterations, int log_frequency,
   for (int iter = 0; iter < iterations; ++iter) {
     auto start_time = GetTime();
     DisplayStats();
+    if (reorder) {
+      InferReorderings();
+    }
 
     if (iter % log_frequency == 0) {
       SerializeInternalState(to_string(iter));
@@ -122,10 +125,6 @@ void Sampler::Sample(int iterations, int log_frequency,
     }
 
     counts.Synchronize();
-
-    if (reorder) {
-      InferReorderings();
-    }
 
     auto end_time = GetTime();
     cout << "Iteration " << iter << " completed in "
