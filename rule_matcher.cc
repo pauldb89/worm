@@ -3,20 +3,15 @@
 #include <iostream>
 
 RuleMatcher::RuleMatcher(const Grammar& grammar, const AlignedTree& tree) {
-  int matcher_size = 0;
   for (auto node = tree.begin(); node != tree.end(); ++node) {
     for (const auto& rule: grammar.GetRules(node->GetTag())) {
       vector<NodeIter> frontier;
       const AlignedTree& frag = rule.first.first;
       if (MatchRule(tree, node, frag, frag.begin(), frontier)) {
         matcher[node].push_back(make_pair(rule, frontier));
-        ++matcher_size;
       }
     }
   }
-
-  // cerr << "Tree size: " << tree.size() << endl;
-  // cerr << "Rule matcher size: " << matcher_size << " rules..." << endl;
 }
 
 bool RuleMatcher::MatchRule(

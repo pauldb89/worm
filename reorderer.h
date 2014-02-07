@@ -38,7 +38,7 @@ class Reorderer : public ReordererBase {
   virtual shared_ptr<pair<Rule, double>> SelectRule(
       const vector<pair<Rule, double>>& candidates) = 0;
 
-  static const double STOP;
+  static const double NO_MATCH;
 
   AlignedTree tree;
   RuleMatcher matcher;

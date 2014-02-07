@@ -3,9 +3,10 @@
 #include <iostream>
 
 #include "grammar.h"
+#include "log_add.h"
 #include "rule_stats_reporter.h"
 
-const double Reorderer::STOP = -1e6;
+const double Reorderer::NO_MATCH = -1e3;
 
 Reorderer::Reorderer(
     const AlignedTree& tree,
@@ -15,11 +16,20 @@ Reorderer::Reorderer(
 
 void Reorderer::ConstructProbabilityCache() {
   for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
-    cache[node] = STOP * tree.size(node);
-    for (const auto& match: matcher.GetRules(node)) {
-      double match_prob = match.first.second;
-      for (const auto& frontier_node: match.second) {
-        match_prob += cache[frontier_node];
+    cache[node] = Log<double>::zero();
+    auto rule_matchings = matcher.GetRules(node);
+    if (rule_matchings.size() > 0) {
+      for (const auto& match: rule_matchings) {
+        double match_prob = match.first.second;
+        for (const auto& frontier_node: match.second) {
+          match_prob += cache[frontier_node];
+        }
+        Combine(cache[node], match_prob);
+      }
+    } else {
+      double match_prob = NO_MATCH;
+      for (auto child = tree.begin(node); child != tree.end(node); ++child) {
+        match_prob += cache[child];
       }
       Combine(cache[node], match_prob);
     }
