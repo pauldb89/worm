@@ -138,7 +138,11 @@ void ReadInternalStructure(
     istream& in, AlignedTree& tree, Dictionary& dictionary, int tree_index) {
   string header;
   getline(in, header);
-  assert(header == "####### Tree: " + to_string(tree_index) + " #######");
+
+  if (header != "####### Tree: " + to_string(tree_index) + " #######") {
+    cerr << "Error parsing entry index " << tree_index << endl;
+    assert(false);
+  }
 
   for (auto& node: tree) {
     string tag;

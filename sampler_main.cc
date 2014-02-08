@@ -33,6 +33,8 @@ int main(int argc, char **argv) {
           "File containing target strings")
       ("alignment,a", po::value<string>()->required(),
           "File containing alignments for GHKM")
+      ("internal,i", po::value<string>(),
+          "File containing internal state")
       ("output,o", po::value<string>()->required(), "Output prefix")
       ("threads", po::value<int>()->default_value(1)->required(),
           "Number of threads to use for sampling")
@@ -64,7 +66,8 @@ int main(int argc, char **argv) {
       ("seed", po::value<unsigned int>()->default_value(0)->required(),
           "Seed for random generator")
       ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
-      ("start_index", po::value<int>(), "Start index for sampling interval")
+      ("start_index", po::value<int>(),
+          "Start index for sampling interval (0 indexed)")
       ("end_index", po::value<int>(), "End index for sampling interval")
       ("ibm1-source-vcb", po::value<string>()->required(),
           "Giza++ source vocabulary file")
@@ -103,42 +106,46 @@ int main(int argc, char **argv) {
   shared_ptr<TranslationTable> forward_table, reverse_table;
   LoadTranslationTables(vm, forward_table, reverse_table, dictionary);
 
-  cerr << "Reading parse trees..." << endl;
-  vector<AlignedTree> parse_trees;
-  ifstream tree_stream(vm["trees"].as<string>());
-  while (!tree_stream.eof()) {
-    parse_trees.push_back(ReadParseTree(tree_stream, dictionary));
-    tree_stream >> ws;
-  }
-  cerr << "Done..." << endl;
+  shared_ptr<vector<Instance>> training;
+  if (vm.count("internal")) {
+    training = make_shared<vector<Instance>>(LoadInternalState(vm, dictionary));
+  } else {
+    cerr << "Reading parse trees..." << endl;
+    vector<AlignedTree> parse_trees;
+    ifstream tree_stream(vm["trees"].as<string>());
+    while (!tree_stream.eof()) {
+      parse_trees.push_back(ReadParseTree(tree_stream, dictionary));
+      tree_stream >> ws;
+    }
+    cerr << "Done..." << endl;
 
-  cerr << "Reading target strings..." << endl;
-  vector<String> target_strings;
-  ifstream string_stream(vm["strings"].as<string>());
-  while (!string_stream.eof()) {
-    target_strings.push_back(ReadTargetString(string_stream, dictionary));
-    string_stream >> ws;
-  }
-  cerr << "Done..." << endl;
+    cerr << "Reading target strings..." << endl;
+    vector<String> target_strings;
+    ifstream string_stream(vm["strings"].as<string>());
+    while (!string_stream.eof()) {
+      target_strings.push_back(ReadTargetString(string_stream, dictionary));
+      string_stream >> ws;
+    }
+    cerr << "Done..." << endl;
 
-  cerr << "Reading alignments..." << endl;
-  vector<Alignment> alignments;
-  ifstream alignment_stream(vm["alignment"].as<string>());
-  while (!alignment_stream.eof()) {
-    Alignment alignment;
-    alignment_stream >> alignment >> ws;
-    alignments.push_back(alignment);
-  }
-  cerr << "Done..." << endl;
+    cerr << "Reading alignments..." << endl;
+    vector<Alignment> alignments;
+    ifstream alignment_stream(vm["alignment"].as<string>());
+    while (!alignment_stream.eof()) {
+      Alignment alignment;
+      alignment_stream >> alignment >> ws;
+      alignments.push_back(alignment);
+    }
+    cerr << "Done..." << endl;
 
-  assert(parse_trees.size() == target_strings.size() &&
-         parse_trees.size() == alignments.size());
+    assert(parse_trees.size() == target_strings.size() &&
+           parse_trees.size() == alignments.size());
 
-  shared_ptr<vector<Instance>> training =
-      make_shared<vector<Instance>>(parse_trees.size());
-  for (size_t i = 0; i < training->size(); ++i) {
-    (*training)[i] = ConstructInstance(
-        parse_trees[i], target_strings[i], alignments[i]);
+    training = make_shared<vector<Instance>>(parse_trees.size());
+    for (size_t i = 0; i < training->size(); ++i) {
+      (*training)[i] = ConstructInstance(
+          parse_trees[i], target_strings[i], alignments[i]);
+    }
   }
 
   shared_ptr<PCFGTable> pcfg_table;
