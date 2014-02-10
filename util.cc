@@ -184,7 +184,6 @@ void ConstructGHKMDerivation(AlignedTree& tree,
     reverse_links[link.second].push_back(link.first);
   }
 
-  cerr << "util" << endl;
   for (int i = 0; i < target_size; ++i) {
     if (reverse_links[i].empty()) {
       assert(backward_links[i].first >= backward_links[i].second);
@@ -196,12 +195,9 @@ void ConstructGHKMDerivation(AlignedTree& tree,
           index = j;
         }
       }
-
       if (index == -1) {
         continue;
       }
-
-      cerr << i << " " << index << endl;
 
       reverse_links[i] = reverse_links[index];
       backward_links[i] = backward_links[index];
