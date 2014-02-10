@@ -177,6 +177,41 @@ void ConstructGHKMDerivation(AlignedTree& tree,
     backward_links[y].second = max(backward_links[y].second, x + 1);
   }
 
+  // Hack: Group unaligned target words in the same group as the closest
+  // target word.
+  vector<vector<int>> reverse_links(target_size);
+  for (auto link: alignment) {
+    reverse_links[link.second].push_back(link.first);
+  }
+
+  cerr << "util" << endl;
+  for (int i = 0; i < target_size; ++i) {
+    if (reverse_links[i].empty()) {
+      assert(backward_links[i].first >= backward_links[i].second);
+
+      int index = -1;
+      for (int j = 0; j < target_size; ++j) {
+        if (!reverse_links[j].empty() &&
+            (index == -1 || abs(i - j) < abs(i - index))) {
+          index = j;
+        }
+      }
+
+      if (index == -1) {
+        continue;
+      }
+
+      cerr << i << " " << index << endl;
+
+      reverse_links[i] = reverse_links[index];
+      backward_links[i] = backward_links[index];
+      for (int j: reverse_links[index]) {
+        forward_links[j].first = min(forward_links[j].first, i);
+        forward_links[j].second = max(forward_links[j].second, i + 1);
+      }
+    }
+  }
+
   map<NodeIter, pair<int, int>> source_spans, target_spans;
   for (auto node = tree.begin_post(); node != tree.end_post(); ++node) {
     auto source_span = make_pair(source_size, 0);
