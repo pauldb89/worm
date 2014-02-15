@@ -1,5 +1,6 @@
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 #include <boost/program_options.hpp>
@@ -7,6 +8,7 @@
 #include "aligned_tree.h"
 #include "dictionary.h"
 #include "grammar.h"
+#include "lattice.h"
 #include "multi_sample_reorderer.h"
 #include "rule_stats_reporter.h"
 #include "time_util.h"
@@ -32,6 +34,8 @@ int main(int argc, char** argv) {
       ("iterations", po::value<unsigned int>()->default_value(0),
           "Number of samples to determine the reordering for each parse tree. "
           "If not set, a max-derivation reorderer will be used instead.")
+      ("max_candidates", po::value<unsigned int>()->default_value(20),
+          "Maximum number of reordering candidates")
       ("threshold", po::value<double>()->default_value(0)->required(),
           "Minimum probabilty for reodering rules")
       ("seed", po::value<unsigned int>()->default_value(0),
@@ -76,7 +80,7 @@ int main(int argc, char** argv) {
   cerr << "Constructing grammar took " << GetDuration(start_time, stop_time)
        << " seconds..." << endl;
 
-  cerr << "Reading training data..." << endl;
+  cerr << "Reading test data..." << endl;
   vector<AlignedTree> input_trees;
   while (cin.good()) {
     input_trees.push_back(ReadParseTree(cin, dictionary));
@@ -98,36 +102,23 @@ int main(int argc, char** argv) {
   int sentence_index = 0;
   start_time = GetTime();
   shared_ptr<RuleStatsReporter> reporter = make_shared<RuleStatsReporter>();
-  vector<String> reorderings(input_trees.size());
+  vector<Distribution> distributions(input_trees.size());
   int num_threads = vm["threads"].as<int>();
   cerr << "Reordering will use " << num_threads << " threads." << endl;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < input_trees.size(); ++i) {
-    shared_ptr<ReordererBase> reorderer;
-    if (num_iterations) {
-      unsigned int seed = vm["seed"].as<unsigned int>();
-      if (seed == 0) {
-        seed = time(NULL);
-      }
-      RandomGenerator generator(seed);
-      reorderer = make_shared<MultiSampleReorderer>(
-          input_trees[i], grammar, reporter, generator, num_iterations);
-    } else {
-      reorderer = make_shared<ViterbiReorderer>(
-          input_trees[i], grammar, reporter);
+    unsigned int seed = vm["seed"].as<unsigned int>();
+    if (seed == 0) {
+      seed = time(NULL);
     }
-
-    // auto reordering_start = GetTime();
+    RandomGenerator generator(seed);
+    MultiSampleReorderer reorderer(
+        input_trees[i], grammar, reporter, generator, num_iterations,
+        vm["max_candidates"].as<unsigned int>());
     // Ignore unparsable sentences.
-    if (input_trees[i].size() <= 1) {
-      reorderings[i] = String();
-    } else {
-      reorderings[i] = reorderer->ConstructReordering();
+    if (input_trees[i].size() > 1) {
+      distributions[i] = reorderer.GetDistribution();
     }
-    // auto reordering_end = GetTime();
-    // cerr << "Time required to reorder sentence: "
-    //      << GetDuration(reordering_start, reordering_end) << " seconds..."
-    //      << endl;
 
     #pragma omp critical
     {
@@ -141,13 +132,13 @@ int main(int argc, char** argv) {
     }
   }
   stop_time = GetTime();
-  cerr << endl << "Reordering " << reorderings.size() << " sentences took "
+  cerr << endl << "Reordering " << distributions.size() << " sentences took "
        << GetDuration(start_time, stop_time) << " seconds..." << endl;
 
   cerr << "Writing reordered sentences..." << endl;
-  for (String reordering: reorderings) {
-    WriteTargetString(cout, reordering, dictionary);
-    cout << "\n";
+  for (const auto& distribution: distributions) {
+    Lattice lattice(distribution, dictionary);
+    cout << lattice << endl;
   }
   cerr << "Done..." << endl;
 

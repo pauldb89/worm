@@ -6,20 +6,21 @@
 
 class Grammar;
 
-class MultiSampleReorderer: public ReordererBase {
+class MultiSampleReorderer {
  public:
   MultiSampleReorderer(
       const AlignedTree& tree,
       const Grammar& grammar,
       shared_ptr<RuleStatsReporter> reporter,
       RandomGenerator& generator,
-      unsigned int num_iterations);
+      unsigned int num_iterations,
+      unsigned int max_candidates);
 
-  String ConstructReordering();
+  Distribution GetDistribution();
 
  private:
   SingleSampleReorderer reorderer;
-  unsigned int num_iterations;
+  unsigned int num_iterations, max_candidates;
 };
 
 #endif

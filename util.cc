@@ -9,10 +9,12 @@
 #include <unordered_set>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/regex.hpp>
 
 #include "aligned_tree.h"
 #include "dictionary.h"
+#include "lattice.h"
 #include "translation_table.h"
 
 Instance ConstructInstance(
@@ -261,6 +263,24 @@ ostream& operator<<(ostream& out, const Alignment& alignment) {
   for (auto link: alignment) {
     out << link.first << "-" << link.second << " ";
   }
+  return out;
+}
+
+ostream& operator<<(ostream& out, const Lattice& lattice) {
+  out << "(";
+  for (size_t i = 0; i + 1 < lattice.graph.size(); ++i) {
+    out << "(";
+    for (size_t j = 0; j < lattice.graph[i].size(); ++j) {
+      string word = get<0>(lattice.graph[i][j]);
+      boost::algorithm::replace_all(word, "\\", "\\\\");
+      boost::algorithm::replace_all(word, "'", "\\'");
+      out << "('" << word << "'," << get<1>(lattice.graph[i][j])
+          << "," << get<2>(lattice.graph[i][j]) << "),";
+    }
+    out << "),";
+  }
+  out << ")";
+
   return out;
 }
 
