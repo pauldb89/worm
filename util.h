@@ -1,5 +1,4 @@
-#ifndef _UTIL_H_
-#define _UTIL_H_
+#pragma once
 
 #include <fstream>
 #include <memory>
@@ -60,5 +59,3 @@ void LoadTranslationTables(
 
 vector<Instance> LoadInternalState(
     po::variables_map vm, Dictionary& dictionary);
-
-#endif

@@ -10,3 +10,4 @@ typedef vector<StringNode> String;
 typedef pair<AlignedTree, String> Instance;
 typedef pair<AlignedTree, String> Rule;
 typedef AlignedTree::iterator NodeIter;
+typedef vector<pair<String, double>> Distribution;

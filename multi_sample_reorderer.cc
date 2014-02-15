@@ -9,23 +9,36 @@ MultiSampleReorderer::MultiSampleReorderer(
     const Grammar& grammar,
     shared_ptr<RuleStatsReporter> reporter,
     RandomGenerator& generator,
-    unsigned int num_iterations) :
+    unsigned int num_iterations,
+    unsigned int max_candidates) :
     reorderer(tree, grammar, reporter, generator),
-    num_iterations(num_iterations) {}
+    num_iterations(num_iterations),
+    max_candidates(max_candidates) {}
 
-String MultiSampleReorderer::ConstructReordering() {
+Distribution MultiSampleReorderer::GetDistribution() {
   map<String, int> reordering_counts;
   for (unsigned int i = 0; i < num_iterations; ++i) {
     ++reordering_counts[reorderer.ConstructReordering()];
   }
 
-  String result;
-  int max_counts = 0;
+  set<pair<int, String>> candidates;
   for (const auto& reordering: reordering_counts) {
-    if (reordering.second > max_counts) {
-      max_counts = reordering.second;
-      result = reordering.first;
-    }
+    candidates.insert(make_pair(reordering.second, reordering.first));
+  }
+
+  while (candidates.size() > max_candidates) {
+    candidates.erase(candidates.begin());
+  }
+
+  double total_counts = 0;
+  for (const auto& reordering: candidates) {
+    total_counts += reordering.first;
+  }
+
+  Distribution result;
+  for (const auto& reordering: candidates) {
+    double prob = reordering.first / total_counts;
+    result.push_back(make_pair(reordering.second, prob));
   }
 
   return result;
