@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
 
   po::notify(vm);
 
+  auto start_time = GetTime();
   cerr << "Constructing reordering grammar..." << endl;
   Dictionary dictionary;
   ifstream grammar_stream(vm["grammar"].as<string>());
@@ -71,7 +72,9 @@ int main(int argc, char** argv) {
   Grammar grammar(grammar_stream, alignment_stream, dictionary,
                   vm["penalty"].as<double>(), vm["threshold"].as<double>(),
                   vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
-  cerr << "Done..." << endl;
+  auto stop_time = GetTime();
+  cerr << "Constructing grammar took " << GetDuration(start_time, stop_time)
+       << " seconds..." << endl;
 
   cerr << "Reading training data..." << endl;
   vector<AlignedTree> input_trees;
@@ -93,7 +96,7 @@ int main(int argc, char** argv) {
   }
 
   int sentence_index = 0;
-  auto start_time = GetTime();
+  start_time = GetTime();
   shared_ptr<RuleStatsReporter> reporter = make_shared<RuleStatsReporter>();
   vector<String> reorderings(input_trees.size());
   int num_threads = vm["threads"].as<int>();
@@ -137,7 +140,7 @@ int main(int argc, char** argv) {
       }
     }
   }
-  auto stop_time = GetTime();
+  stop_time = GetTime();
   cerr << endl << "Reordering " << reorderings.size() << " sentences took "
        << GetDuration(start_time, stop_time) << " seconds..." << endl;
 
