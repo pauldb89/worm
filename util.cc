@@ -268,14 +268,15 @@ ostream& operator<<(ostream& out, const Alignment& alignment) {
 
 ostream& operator<<(ostream& out, const Lattice& lattice) {
   out << "(";
-  for (size_t i = 0; i + 1 < lattice.graph.size(); ++i) {
+  for (size_t node = 0; node + 1 < lattice.graph.size(); ++node) {
     out << "(";
-    for (size_t j = 0; j < lattice.graph[i].size(); ++j) {
-      string word = get<0>(lattice.graph[i][j]);
+    for (const auto& edge: lattice.graph[node]) {
+      string word = get<0>(edge);
       boost::algorithm::replace_all(word, "\\", "\\\\");
       boost::algorithm::replace_all(word, "'", "\\'");
-      out << "('" << word << "'," << get<1>(lattice.graph[i][j])
-          << "," << get<2>(lattice.graph[i][j]) << "),";
+      double prob = get<1>(edge);
+      int node_delta = get<2>(edge) - node;
+      out << "('" << word << "'," << prob << "," << node_delta << "),";
     }
     out << "),";
   }
