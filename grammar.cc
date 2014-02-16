@@ -63,9 +63,6 @@ void Grammar::RemoveMixedLinks(const Rule& rule, Alignment& alignment) {
       }), alignment.end());
 }
 
-vector<pair<Rule, double>> Grammar::GetRules(int root_tag) const {
-  if (!rules.count(root_tag)) {
-    return vector<pair<Rule, double>>();
-  }
+const vector<pair<Rule, double>>& Grammar::GetRules(int root_tag) const {
   return rules.at(root_tag);
 }

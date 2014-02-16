@@ -20,7 +20,7 @@ class Grammar {
           Dictionary& dictionary, double penalty, double threshold,
           int max_leaves, int max_tree_size);
 
-  vector<pair<Rule, double>> GetRules(int tag) const;
+  const vector<pair<Rule, double>>& GetRules(int tag) const;
 
  private:
   // Removes nonterminal-terminal and terminal-nonterminal links from the

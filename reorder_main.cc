@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
   ifstream grammar_stream(vm["grammar"].as<string>());
   ifstream alignment_stream(vm["alignment"].as<string>());
   Grammar grammar(grammar_stream, alignment_stream, dictionary,
-      vm["penalty"].as<double>(), vm["threshold"].as<double>(),
-      vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
+                  vm["penalty"].as<double>(), vm["threshold"].as<double>(),
+                  vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
   cerr << "Done..." << endl;
 
   cerr << "Reading training data..." << endl;
