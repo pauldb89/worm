@@ -11,6 +11,7 @@ MultiSampleReorderer::MultiSampleReorderer(
     RandomGenerator& generator,
     unsigned int num_iterations,
     unsigned int max_candidates) :
+    tree(tree),
     reorderer(tree, grammar, reporter, generator),
     num_iterations(num_iterations),
     max_candidates(max_candidates) {}
@@ -30,9 +31,25 @@ Distribution MultiSampleReorderer::GetDistribution() {
     candidates.erase(candidates.begin());
   }
 
+  String identity_reordering;
+  int word_index = 0;
+  for (auto leaf = tree.begin_leaf(); leaf != tree.end_leaf(); ++leaf) {
+    identity_reordering.push_back(StringNode(leaf->GetWord(), word_index, -1));
+    ++word_index;
+  }
+
   double total_counts = 0;
+  bool contains_identity = false;
   for (const auto& reordering: candidates) {
     total_counts += reordering.first;
+    if (reordering.second == identity_reordering) {
+      contains_identity = true;
+    }
+  }
+
+  if (!contains_identity) {
+    candidates.insert(make_pair(total_counts / 2, identity_reordering));
+    total_counts += total_counts / 2;
   }
 
   Distribution result;

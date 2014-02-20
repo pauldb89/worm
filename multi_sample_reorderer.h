@@ -19,6 +19,7 @@ class MultiSampleReorderer {
   Distribution GetDistribution();
 
  private:
+  AlignedTree tree;
   SingleSampleReorderer reorderer;
   unsigned int num_iterations, max_candidates;
 };
