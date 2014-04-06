@@ -24,6 +24,10 @@ int main(int argc, char** argv) {
 
   po::options_description general_options("General options");
   general_options.add_options()
+      ("trees,t", po::value<string>()->required(),
+          "Input parse trees to be reordered")
+      ("sentences", po::value<string>()->required(),
+          "SOURCE sentences used as a default for parse failures")
       ("grammar,g", po::value<string>()->required(), "Path to grammar file")
       ("alignment,a", po::value<string>()->required(),
           "Path to file containing rule alignments")
@@ -73,13 +77,22 @@ int main(int argc, char** argv) {
                   vm["max_leaves"].as<int>(), vm["max_tree_size"].as<int>());
   cerr << "Done..." << endl;
 
-  cerr << "Reading training data..." << endl;
+  cerr << "Reading parse trees..." << endl;
+  ifstream tree_stream(vm["trees"].as<string>());
   vector<AlignedTree> input_trees;
-  while (cin.good()) {
-    input_trees.push_back(ReadParseTree(cin, dictionary));
-    cin >> ws;
+  while (!tree_stream.eof()) {
+    input_trees.push_back(ReadParseTree(tree_stream, dictionary));
+    tree_stream >> ws;
   }
   cerr << "Done..." << endl;
+
+  cerr << "Reading source sentences..." << endl;
+  ifstream sentence_stream(vm["sentences"].as<string>());
+  vector<String> source_sentences;
+  while (!sentence_stream.eof()) {
+    source_sentences.push_back(ReadTargetString(sentence_stream, dictionary));
+    sentence_stream >> ws;
+  }
 
   unsigned int num_iterations = 0;
   if (vm.count("iterations")) {
@@ -100,31 +113,25 @@ int main(int argc, char** argv) {
   cerr << "Reordering will use " << num_threads << " threads." << endl;
   #pragma omp parallel for schedule(dynamic) num_threads(num_threads)
   for (size_t i = 0; i < input_trees.size(); ++i) {
-    shared_ptr<ReordererBase> reorderer;
-    if (num_iterations) {
-      unsigned int seed = vm["seed"].as<unsigned int>();
-      if (seed == 0) {
-        seed = time(NULL);
-      }
-      RandomGenerator generator(seed);
-      reorderer = make_shared<MultiSampleReorderer>(
-          input_trees[i], grammar, reporter, generator, num_iterations);
-    } else {
-      reorderer = make_shared<ViterbiReorderer>(
-          input_trees[i], grammar, reporter);
-    }
-
-    // auto reordering_start = GetTime();
     // Ignore unparsable sentences.
     if (input_trees[i].size() <= 1) {
-      reorderings[i] = String();
+      reorderings[i] = source_sentences[i];
     } else {
+      shared_ptr<ReordererBase> reorderer;
+      if (num_iterations) {
+        unsigned int seed = vm["seed"].as<unsigned int>();
+        if (seed == 0) {
+          seed = time(NULL);
+        }
+        RandomGenerator generator(seed);
+        reorderer = make_shared<MultiSampleReorderer>(
+            input_trees[i], grammar, reporter, generator, num_iterations);
+      } else {
+        reorderer = make_shared<ViterbiReorderer>(
+            input_trees[i], grammar, reporter);
+      }
       reorderings[i] = reorderer->ConstructReordering();
     }
-    // auto reordering_end = GetTime();
-    // cerr << "Time required to reorder sentence: "
-    //      << GetDuration(reordering_start, reordering_end) << " seconds..."
-    //      << endl;
 
     #pragma omp critical
     {
