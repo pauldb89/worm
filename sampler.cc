@@ -65,6 +65,11 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
 
   if (smart_expand) {
     unordered_map<int, int> split_counts;
+    // Hack: Have everything initialized.
+    for (const int& non_terminal: non_terminals) {
+      split_counts[non_terminal] = 1;
+    }
+
     for (auto instance: *training) {
       for (auto node: instance.first) {
         if (node.IsSplitNode()) {
@@ -74,7 +79,7 @@ Sampler::Sampler(const shared_ptr<vector<Instance>>& training,
     }
 
     for (const auto& entry: split_counts) {
-      double expand_prob = pow(entry.second, 1.8) + 1;
+      double expand_prob = pow(entry.second, 1.8);
       expand_probs[entry.first] = -log(expand_prob);
       not_expand_probs[entry.first] = log((expand_prob - 1) / expand_prob);
     }

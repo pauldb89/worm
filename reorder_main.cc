@@ -19,7 +19,7 @@ namespace po = boost::program_options;
 int main(int argc, char** argv) {
   po::options_description cmdline_specific("Command line options");
   cmdline_specific.add_options()
-      ("help", "Show available options")
+      ("help,h", "Show available options")
       ("config,c", po::value<string>(), "Path to config file");
 
   po::options_description general_options("General options");

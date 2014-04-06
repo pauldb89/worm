@@ -128,6 +128,9 @@ int main(int argc, char** argv) {
     best_alignments[i] = heuristic.FindBestAlignment(
         parse_trees[i], target_strings[i], gdfa_alignments[i],
         intersect_alignments[i]);
+    if (best_alignments[i].size() == 0) {
+      best_alignments[i] = intersect_alignments[i];
+    }
     #pragma omp critical
     {
       ++alignment_index;
