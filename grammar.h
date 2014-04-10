@@ -20,6 +20,8 @@ class Grammar {
           Dictionary& dictionary, double penalty, double threshold,
           int max_leaves, int max_tree_size);
 
+  bool HasRules(int tag) const;
+
   const vector<pair<Rule, double>>& GetRules(int tag) const;
 
  private:

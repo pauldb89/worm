@@ -4,11 +4,14 @@
 
 RuleMatcher::RuleMatcher(const Grammar& grammar, const AlignedTree& tree) {
   for (auto node = tree.begin(); node != tree.end(); ++node) {
-    for (const auto& rule: grammar.GetRules(node->GetTag())) {
-      vector<NodeIter> frontier;
-      const AlignedTree& frag = rule.first.first;
-      if (MatchRule(tree, node, frag, frag.begin(), frontier)) {
-        matcher[node].push_back(make_pair(rule, frontier));
+    // Hack to enable passing grammar output by reference.
+    if (grammar.HasRules(node->GetTag())) {
+      for (const auto& rule: grammar.GetRules(node->GetTag())) {
+        vector<NodeIter> frontier;
+        const AlignedTree& frag = rule.first.first;
+        if (MatchRule(tree, node, frag, frag.begin(), frontier)) {
+          matcher[node].push_back(make_pair(rule, frontier));
+        }
       }
     }
   }
@@ -51,5 +54,6 @@ MatchingRules RuleMatcher::GetRules(const NodeIter& node) const {
   if (!matcher.count(node)) {
     return MatchingRules();
   }
+
   return matcher.at(node);
 }
