@@ -1,4 +1,4 @@
 worm
 ====
 
-A lousy attempt to a word reordering model.
+A word reordering model.
