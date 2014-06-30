@@ -15,8 +15,7 @@ typedef boost::hash<pair<int, int>> PairHasher;
 
 class TranslationTable {
  public:
-  TranslationTable(ifstream& fin, Dictionary& source_vocabulary,
-                   Dictionary& target_vocabulary, Dictionary& dictionary,
+  TranslationTable(ifstream& fin, Dictionary& dictionary, bool reversed,
                    int max_threads);
 
   void CacheSentence(

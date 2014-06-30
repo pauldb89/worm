@@ -64,7 +64,7 @@ AlignedTree ReadParseTree(istream& tree_stream, Dictionary& dictionary) {
         st.top()->SetSplitNode(true);
       } else {
         string word = *it;
-        transform(word.begin(), word.end(), word.begin(), ::tolower);
+        //transform(word.begin(), word.end(), word.begin(), ::tolower);
         st.top()->SetWord(dictionary.GetIndex(word));
         st.top()->SetWordIndex(word_index);
         ++word_index;
@@ -278,24 +278,14 @@ void LoadTranslationTables(
     shared_ptr<TranslationTable>& forward_table,
     shared_ptr<TranslationTable>& reverse_table,
     Dictionary& dictionary) {
-
-  cerr << "Reading monolingual dictionaries..." << endl;
-  ifstream source_vcb_stream(vm["ibm1-source-vcb"].as<string>());
-  Dictionary source_vocabulary(source_vcb_stream);
-  ifstream target_vcb_stream(vm["ibm1-target-vcb"].as<string>());
-  Dictionary target_vocabulary(target_vcb_stream);
-  cerr << "Done..." << endl;
-
   int num_threads = vm.count("threads") ? vm["threads"].as<int>() : 1;
   cerr << "Reading translation tables..." << endl;
   ifstream forward_stream(vm["ibm1-forward"].as<string>());
   forward_table = make_shared<TranslationTable>(
-      forward_stream, source_vocabulary, target_vocabulary,
-      dictionary, num_threads);
+      forward_stream, dictionary, false, num_threads);
   ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
   reverse_table = make_shared<TranslationTable>(
-      reverse_stream, target_vocabulary, source_vocabulary,
-      dictionary, num_threads);
+      reverse_stream, dictionary, true, num_threads);
   cerr << "Done..." << endl;
 }
 

@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
           "Dirichlet process concentration parameter")
       ("iterations", po::value<int>()->default_value(100)->required(),
           "Number of iterations")
-      ("log_freq", po::value<int>()->default_value(0)->required(),
+      ("log_freq", po::value<int>()->default_value(10)->required(),
           "Frequency (in iterations) for serializing the grammar to disk")
       ("pexpand", po::value<double>()->default_value(0.5)->required(),
           "Param. for the Bernoulli distr. for a node to be split")
@@ -69,10 +69,6 @@ int main(int argc, char **argv) {
       ("start_index", po::value<int>(),
           "Start index for sampling interval (0 indexed)")
       ("end_index", po::value<int>(), "End index for sampling interval")
-      ("ibm1-source-vcb", po::value<string>()->required(),
-          "Giza++ source vocabulary file")
-      ("ibm1-target-vcb", po::value<string>()->required(),
-          "Giza++ target vocabulary file")
       ("ibm1-forward", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
           "source_word_id target_word_id probability.")

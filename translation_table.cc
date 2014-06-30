@@ -1,18 +1,23 @@
 #include "translation_table.h"
 
+#include <cmath>
+
 #include "dictionary.h"
 
 const double TranslationTable::DEFAULT_NULL_PROB = 1e-2;
 
 TranslationTable::TranslationTable(
-    ifstream& fin, Dictionary& source_vocabulary,
-    Dictionary& target_vocabulary, Dictionary& dict, int max_threads) :
+    ifstream& fin, Dictionary& dict, bool rev, int max_threads) :
     cache(max_threads) {
   double prob;
-  int source_id, target_id;
-  while (fin >> source_id >> target_id >> prob) {
-    int source_word = dict.GetIndex(source_vocabulary.GetToken(source_id));
-    int target_word = dict.GetIndex(target_vocabulary.GetToken(target_id));
+  string src, trg;
+  while (fin >> src >> trg >> prob) {
+    prob = exp(prob);
+    if (rev) swap(src,trg);
+    if (src == "<eps>") src == "__NULL__";
+    if (trg == "<eps>") trg == "__NULL__";
+    int source_word = dict.GetIndex(src);
+    int target_word = dict.GetIndex(trg);
     if (prob >= DEFAULT_NULL_PROB) {
       table[make_pair(source_word, target_word)] = prob;
     }
