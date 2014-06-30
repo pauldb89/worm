@@ -29,7 +29,7 @@ You will now need to create training data `corpus.zh-en` for the word aligner th
 
     $CDEC/corpus/paste-corpus.pl corpus.zh corpus.en > corpus.zh-en
 
-### Get starting alignment and base parameters
+### Initial word alignment and base parameters
 
 In this section, a basic word alignment, `corpus.gdfa`, along with lexical translation probabilities are created.
 
