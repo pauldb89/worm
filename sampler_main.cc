@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
           "Number of iterations")
       ("log_freq", po::value<int>()->default_value(10)->required(),
           "Frequency (in iterations) for serializing the grammar to disk")
-      ("pexpand", po::value<double>()->default_value(0.5)->required(),
+      ("pexpand", po::value<double>()->default_value(0.0001)->required(),
           "Param. for the Bernoulli distr. for a node to be split")
       ("pchild", po::value<double>()->default_value(0.5)->required(),
           "Param. for the geom. distr. for the number of children")
