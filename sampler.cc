@@ -110,7 +110,6 @@ void Sampler::Sample(int iterations, int log_frequency,
       if (reorder) {
         SerializeReorderings(to_string(iter));
       }
-      // SerializeContexts(to_string(iter));
       cerr << "Done..." << endl;
     }
 
@@ -663,28 +662,6 @@ void Sampler::SerializeAlignments(const string& iteration) {
     auto alignments = alignment_constructor.ExtractAlignments(instance);
     fwd_out << alignments.first << "\n";
     rev_out << alignments.second << "\n";
-  }
-}
-
-void Sampler::SerializeContexts(const string& iteration) {
-  cerr << "Serializing contexts..." << endl;
-  auto start_time = GetTime();
-
-  ofstream out(GetOutputFilename(output_directory, iteration, "context"));
-
-  // Rule ||| left source context words ||| inside source words ||| right source context words
-  for (size_t i = 0; i < training->size(); ++i) {
-    const Instance& instance = (*training)[i];
-    const AlignedTree& tree = instance.first;
-    if (tree.size() <= 1) continue;
-    for (NodeIter node = tree.begin(); node != tree.end(); ++node) {
-      if (node->IsSplitNode()) {
-        Rule rule = extractor.ExtractRule(instance, node);
-        auto span = node->GetSpan();
-      }
-      //out << dictionary.GetToken(node.GetTag()) << " " << span.first << " "
-      //    << span.second << "\n";
-    }
   }
 }
 

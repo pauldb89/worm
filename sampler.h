@@ -37,8 +37,6 @@ class Sampler {
 
   void SerializeAlignments(const string& iteration = "");
 
-  void SerializeContexts(const string& iteration = "");
-
   void SerializeGrammar(bool scfg_format, const string& iteration = "");
 
   void SerializeReorderings(const string& iteration = "");
