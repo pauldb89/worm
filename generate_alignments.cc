@@ -30,10 +30,10 @@ int main(int argc, char** argv) {
           "Giza++ source vocabulary file")
       ("ibm1-target-vcb", po::value<string>()->required(),
           "Giza++ target vocabulary file")
-      ("ibm1-forward", po::value<string>()->required(),
+      ("forward-prob", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
           "source_word_id target_word_id probability.")
-      ("ibm1-reverse", po::value<string>()->required(),
+      ("reverse-prob", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(s|t). Expected format: "
           "target_word_id source_word_id probability.");
 

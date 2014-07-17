@@ -46,8 +46,8 @@ This section describes running the TSG aligner. Outputs are written every 10 ite
     ./worm/sampler --alignment corpus.gdfa \
                    --trees corpus.parsed-zh \
                    --strings corpus.en \
-                   --ibm1-forward fwd.probs \
-                   --ibm1-reverse rev.probs \
+                   --forward-prob fwd.probs \
+                   --reverse-prob rev.probs \
                    --output worm-out \
                    --threads 6 \
                    --iterations 1000 &>log.sampler &

@@ -280,10 +280,10 @@ void LoadTranslationTables(
     Dictionary& dictionary) {
   int num_threads = vm.count("threads") ? vm["threads"].as<int>() : 1;
   cerr << "Reading translation tables..." << endl;
-  ifstream forward_stream(vm["ibm1-forward"].as<string>());
+  ifstream forward_stream(vm["forward-prob"].as<string>());
   forward_table = make_shared<TranslationTable>(
       forward_stream, dictionary, false, num_threads);
-  ifstream reverse_stream(vm["ibm1-reverse"].as<string>());
+  ifstream reverse_stream(vm["reverse-prob"].as<string>());
   reverse_table = make_shared<TranslationTable>(
       reverse_stream, dictionary, true, num_threads);
   cerr << "Done..." << endl;

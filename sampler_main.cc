@@ -70,10 +70,10 @@ int main(int argc, char **argv) {
       ("start_index", po::value<int>(),
           "Start index for sampling interval (0 indexed)")
       ("end_index", po::value<int>(), "End index for sampling interval")
-      ("ibm1-forward", po::value<string>()->required(),
+      ("forward-prob", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(t|s). Expected format: "
           "source_word_id target_word_id probability.")
-      ("ibm1-reverse", po::value<string>()->required(),
+      ("reverse-prob", po::value<string>()->required(),
           "Path to the IBM Model 1 translation table p(s|t). Expected format: "
           "target_word_id source_word_id probability.");
 
