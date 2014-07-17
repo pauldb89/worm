@@ -65,7 +65,8 @@ int main(int argc, char **argv) {
           "Param. for the geom. distr. for the number of target terminals")
       ("seed", po::value<unsigned int>()->default_value(0)->required(),
           "Seed for random generator")
-      ("pcfg", "Use MLE PCFG estimates in the base distribution for trees")
+      ("pcfg", po::value<bool>()->default_value(true)->required(),
+          "Use MLE PCFG estimates in the base distribution for trees")
       ("start_index", po::value<int>(),
           "Start index for sampling interval (0 indexed)")
       ("end_index", po::value<int>(), "End index for sampling interval")
@@ -145,7 +146,7 @@ int main(int argc, char **argv) {
   }
 
   shared_ptr<PCFGTable> pcfg_table;
-  if (vm.count("pcfg")) {
+  if (vm["pcfg"].as<bool>()) {
     cerr << "Constructing PCFG table..." << endl;
     pcfg_table = make_shared<PCFGTable>(training);
     cerr << "Done..." << endl;
